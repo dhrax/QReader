@@ -18,4 +18,12 @@ public class Constants {
      * Camera's permission request ID
      */
     public static final int REQUEST_CAMERA_PERMISSION = 1;
+
+    public static final float DEFAULT_ZOOM_FACTOR =  1.0f;
+
+    public static final int DEFAULT_ZOOM_SMOOTHER_VALUE = 10;
+
+    public static final float DEFAULT_ZOOM_BAR_PROGRESS = 1f / DEFAULT_ZOOM_SMOOTHER_VALUE;
+
+
 }

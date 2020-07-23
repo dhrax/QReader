@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Matrix;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -27,6 +28,7 @@ import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
+import android.widget.SeekBar;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -34,6 +36,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.math.MathUtils;
 
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.ReaderException;
@@ -53,19 +56,26 @@ import java.util.concurrent.TimeUnit;
 import static android.graphics.ImageFormat.YUV_420_888;
 import static android.hardware.camera2.CameraCharacteristics.LENS_FACING;
 import static android.hardware.camera2.CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP;
+import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AF_STATE_ACTIVE_SCAN;
+import static android.hardware.camera2.CaptureRequest.CONTROL_AE_MODE;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE;
+import static android.hardware.camera2.CaptureRequest.SCALER_CROP_REGION;
+import static android.widget.Toast.LENGTH_SHORT;
+import static com.example.qreader.Constants.DEFAULT_ZOOM_BAR_PROGRESS;
+import static com.example.qreader.Constants.DEFAULT_ZOOM_FACTOR;
+import static com.example.qreader.Constants.DEFAULT_ZOOM_SMOOTHER_VALUE;
 import static com.example.qreader.Constants.MAX_PREVIEW_HEIGHT;
 import static com.example.qreader.Constants.MAX_PREVIEW_WIDTH;
 import static com.example.qreader.Constants.REQUEST_CAMERA_PERMISSION;
 
 //TODO add interface functions
-public class MainActivity extends AppCompatActivity {
+public class CameraPreviewActivity extends AppCompatActivity {
 
     /**
      * Tag for the {@link Log}.
      */
-    public static final String TAG = MainActivity.class.getName();
+    public static final String TAG = CameraPreviewActivity.class.getName();
 
     /**
      * ID of the current {@link CameraDevice}.
@@ -76,6 +86,11 @@ public class MainActivity extends AppCompatActivity {
      * An {@link AutoFitTextureView} for camera preview.
      */
     private AutoFitTextureView mTextureView;
+
+    /**
+     * A {@link SeekBar} to manage the zoom level.
+     */
+    private SeekBar zoomBar;
 
     /**
      * The {@link android.util.Size} of camera preview.
@@ -96,6 +111,18 @@ public class MainActivity extends AppCompatActivity {
      * Whether the current camera device supports Flash or not.
      */
     private boolean mFlashSupported;
+
+    /**
+     * Whether the current camera device supports Zoom or not.
+     */
+    private boolean mZoomSupported;
+
+    /**
+     * Max zoom value supported by the {@link CameraDevice}.
+     */
+    public float maxZoom;
+    private Rect mSensorSize;
+    private Rect mCropRegion = new Rect();
 
     /**
      * {@link CameraDevice.StateCallback} is called when {@link CameraDevice} changes its state.
@@ -257,12 +284,68 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_camera_preview);
 
         mTextureView = findViewById(R.id.texture);
+        zoomBar = findViewById(R.id.zoomBar);
 
         mQrReader = new QRCodeReader();
+
+        createListeners();
     }
+
+    private void createListeners() {
+
+        zoomBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress,
+                                          boolean fromUser) {
+                //We add DEFAULT_ZOOM_SMOOTHER_VALUE to the progress so the first section (0 * DEFAULT_ZOOM_SMOOTHER_VALUE)
+                // and the second one (1 * DEFAULT_ZOOM_SMOOTHER_VALUE) don't stay in the same zoom level
+                setZoom((progress + DEFAULT_ZOOM_SMOOTHER_VALUE) * DEFAULT_ZOOM_BAR_PROGRESS);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+
+        });
+    }
+
+    private void setZoom(float zoom) {
+
+        if (!mZoomSupported || mPreviewRequestBuilder == null) {
+            return;
+        }
+
+        final float newZoom = MathUtils.clamp(zoom, DEFAULT_ZOOM_FACTOR, maxZoom);
+
+        final int centerX = mSensorSize.width() / 2;
+        final int centerY = mSensorSize.height() / 2;
+        final int deltaX = (int) ((0.5f * mSensorSize.width()) / newZoom);
+        final int deltaY = (int) ((0.5f * mSensorSize.height()) / newZoom);
+
+        mCropRegion.set(centerX - deltaX,
+                centerY - deltaY,
+                centerX + deltaX,
+                centerY + deltaY);
+
+        mPreviewRequestBuilder.set(SCALER_CROP_REGION, mCropRegion);
+
+        mPreviewRequest = mPreviewRequestBuilder.build();
+        try {
+            mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+
+    }
+
 
     @Override
     public void onResume() {
@@ -346,7 +429,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Opens the camera specified by {@link MainActivity#mCameraId}.
+     * Opens the camera specified by {@link CameraPreviewActivity#mCameraId}.
      */
     private void openCamera(int width, int height) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -363,6 +446,8 @@ public class MainActivity extends AppCompatActivity {
             }
             assert manager != null;
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
+            //We subtract 1 to the maxZoom value because we start from 0
+            zoomBar.setMax(((int) maxZoom * DEFAULT_ZOOM_SMOOTHER_VALUE) - 1);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -417,11 +502,26 @@ public class MainActivity extends AppCompatActivity {
                 if (map == null)
                     continue;
 
-                // For still image captures, we use the largest available size.
-                /**
-                 * Format of the image to process
-                 */
+                mSensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+
+                if (mSensorSize == null) {
+                    maxZoom = DEFAULT_ZOOM_FACTOR;
+                    mZoomSupported = false;
+                }else {
+                    final Float value = characteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
+
+                    maxZoom = ((value == null) || (value < DEFAULT_ZOOM_FACTOR)) ? DEFAULT_ZOOM_FACTOR : value;
+
+                    mZoomSupported = (Float.compare(maxZoom, DEFAULT_ZOOM_FACTOR) > 0);
+
+                    // Check if the flash is supported.
+                    Boolean available = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
+                    mFlashSupported = available == null ? false : available;
+                }
+
                 int mImageformat = YUV_420_888;
+
+                // For still image captures, we use the largest available size.
                 Size largest = Collections.max(Arrays.asList(map.getOutputSizes(mImageformat)), new CompareSizesByArea());
                 mImageReader = ImageReader.newInstance(largest.getWidth() / 16, largest.getHeight() / 16, mImageformat, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
@@ -443,8 +543,6 @@ public class MainActivity extends AppCompatActivity {
                 // garbage capture data.
                 mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, maxPreviewWidth, maxPreviewHeight, largest);
 
-                Log.d("DEBUG TamanoPreview", mPreviewSize.toString());
-
                 // We fit the aspect ratio of TextureView to the size of preview we picked.
                 int orientation = getResources().getConfiguration().orientation;
                 if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -454,10 +552,6 @@ public class MainActivity extends AppCompatActivity {
                             mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 }
 
-                // Check if the flash is supported.
-                Boolean available = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
-                mFlashSupported = available == null ? false : available;
-
                 mCameraId = cameraId;
                 return;
             }
@@ -466,18 +560,18 @@ public class MainActivity extends AppCompatActivity {
         } catch (NullPointerException e) {
             // Currently an NPE is thrown when the Camera2API is used but not supported on the
             // device this code runs.
-            Toast.makeText(MainActivity.this, "Camera2 API not supported on this device", Toast.LENGTH_LONG).show();
+            Toast.makeText(CameraPreviewActivity.this, "Camera2 API not supported on this device", Toast.LENGTH_LONG).show();
         }
     }
 
     private void requestCameraPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
-            new AlertDialog.Builder(MainActivity.this)
+            new AlertDialog.Builder(CameraPreviewActivity.this)
                     .setMessage("R string request permission")
                     .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            ActivityCompat.requestPermissions(MainActivity.this,
+                            ActivityCompat.requestPermissions(CameraPreviewActivity.this,
                                     new String[]{Manifest.permission.CAMERA},
                                     REQUEST_CAMERA_PERMISSION);
                         }
@@ -503,7 +597,7 @@ public class MainActivity extends AppCompatActivity {
                                            @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(MainActivity.this, "ERROR: Camera permissions not granted", Toast.LENGTH_LONG).show();
+                Toast.makeText(CameraPreviewActivity.this, "ERROR: Camera permissions not granted", Toast.LENGTH_LONG).show();
             }
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -627,6 +721,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Creates the result Activity with the link of the QR decoded
+     *
      * @param text link decoded
      */
     public void onQRCodeRead(final String text) {
@@ -646,15 +741,14 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(MainActivity.this, text, Toast.LENGTH_SHORT).show();
+                Toast.makeText(CameraPreviewActivity.this, text, LENGTH_SHORT).show();
             }
         });
     }
 
     private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
         if (mFlashSupported) {
-            requestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-                    CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+            requestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_ON_AUTO_FLASH);
         }
     }
 
