@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">QReader</string>
+    <string name="loading">Loading...</string>
 </resources>

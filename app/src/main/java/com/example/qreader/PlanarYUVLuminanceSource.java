@@ -1,8 +1,8 @@
 package com.example.qreader;
 
 import com.google.zxing.LuminanceSource;
-
-final public class PlanarYUVLuminanceSource extends LuminanceSource {
+@Deprecated
+final class PlanarYUVLuminanceSource extends LuminanceSource {
 
     private final byte[] mYuvData;
 

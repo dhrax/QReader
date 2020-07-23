@@ -43,6 +43,7 @@ import com.google.zxing.ReaderException;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
+import com.google.zxing.PlanarYUVLuminanceSource;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -198,8 +199,8 @@ public class CameraPreviewActivity extends AppCompatActivity {
                         buffer.get(data);
                         int width = img.getWidth();
                         int height = img.getHeight();
-                        //TODO use Camera2.PlanarYUVLuminanceSource
-                        PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(data, width, height);
+                        //Deprecated: PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(data, width, height);
+                        PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(data, width,height, 0, 0, width, height, false);
                         BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
 
                         rawResult = mQrReader.decode(bitmap);
@@ -212,13 +213,6 @@ public class CameraPreviewActivity extends AppCompatActivity {
                         if (img != null)
                             img.close();
                     }
-                    /*
-                    if (rawResult != null) {
-                        Log.e(TAG, "Decoding successful!");
-                    } else {
-                        Log.d(TAG, "No QR code found…");
-                    }
-                     */
                 }
 
             };
@@ -301,9 +295,11 @@ public class CameraPreviewActivity extends AppCompatActivity {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress,
                                           boolean fromUser) {
-                //We add DEFAULT_ZOOM_SMOOTHER_VALUE to the progress so the first section (0 * DEFAULT_ZOOM_SMOOTHER_VALUE)
-                // and the second one (1 * DEFAULT_ZOOM_SMOOTHER_VALUE) don't stay in the same zoom level
-                setZoom((progress + DEFAULT_ZOOM_SMOOTHER_VALUE) * DEFAULT_ZOOM_BAR_PROGRESS);
+                if (mZoomSupported && mPreviewRequestBuilder != null) {
+                    //We add DEFAULT_ZOOM_SMOOTHER_VALUE to the progress so the first section (0 * DEFAULT_ZOOM_SMOOTHER_VALUE)
+                    // and the second one (1 * DEFAULT_ZOOM_SMOOTHER_VALUE) don't stay in the same zoom level
+                    setZoom((progress + DEFAULT_ZOOM_SMOOTHER_VALUE) * DEFAULT_ZOOM_BAR_PROGRESS);
+                }
             }
 
             @Override
@@ -317,11 +313,11 @@ public class CameraPreviewActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Method that changes the zoom value of our {@link CameraDevice}.
+     * @param zoom new zoom value
+     */
     private void setZoom(float zoom) {
-
-        if (!mZoomSupported || mPreviewRequestBuilder == null) {
-            return;
-        }
 
         final float newZoom = MathUtils.clamp(zoom, DEFAULT_ZOOM_FACTOR, maxZoom);
 
@@ -343,9 +339,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-
     }
-
 
     @Override
     public void onResume() {
@@ -567,13 +561,12 @@ public class CameraPreviewActivity extends AppCompatActivity {
     private void requestCameraPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
             new AlertDialog.Builder(CameraPreviewActivity.this)
-                    .setMessage("R string request permission")
+                    .setMessage("Allow this application to use the camera?")
                     .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             ActivityCompat.requestPermissions(CameraPreviewActivity.this,
-                                    new String[]{Manifest.permission.CAMERA},
-                                    REQUEST_CAMERA_PERMISSION);
+                                    new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
                         }
                     })
                     .setNegativeButton(android.R.string.cancel,
@@ -581,14 +574,12 @@ public class CameraPreviewActivity extends AppCompatActivity {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     finish();
-
                                 }
                             })
                     .create();
 
         } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},
-                    REQUEST_CAMERA_PERMISSION);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
         }
     }
 
@@ -650,8 +641,6 @@ public class CameraPreviewActivity extends AppCompatActivity {
         List<Size> bigEnough = new ArrayList<>();
         // Collect the supported resolutions that are smaller than the preview Surface
         List<Size> notBigEnough = new ArrayList<>();
-        int w = aspectRatio.getWidth();
-        int h = aspectRatio.getHeight();
         for (Size option : choices) {
             if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight) {
                 if (option.getWidth() >= textureViewWidth && option.getHeight() >= textureViewHeight) {
@@ -714,13 +703,12 @@ public class CameraPreviewActivity extends AppCompatActivity {
         @Override
         public int compare(Size lhs, Size rhs) {
             // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
+            return Long.signum((long) lhs.getWidth() * lhs.getHeight() - (long) rhs.getWidth() * rhs.getHeight());
         }
     }
 
     /**
-     * Creates the result Activity with the link of the QR decoded
+     * Creates the {@link ResultActivity} with the link of the QR decoded
      *
      * @param text link decoded
      */
@@ -746,6 +734,10 @@ public class CameraPreviewActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Set the flash automatically when in low light conditions
+     * @param requestBuilder {@link CaptureRequest.Builder} of the actual {@link CameraDevice}
+     */
     private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
         if (mFlashSupported) {
             requestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_ON_AUTO_FLASH);

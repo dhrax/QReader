@@ -1,7 +1,9 @@
 package com.example.qreader;
 
 
-
+/**
+ * Constants used throughout the application
+ */
 public class Constants {
 
     /**
@@ -19,11 +21,18 @@ public class Constants {
      */
     public static final int REQUEST_CAMERA_PERMISSION = 1;
 
+    /**
+     * Zoom value if the camera device doesn't support zoom
+     */
     public static final float DEFAULT_ZOOM_FACTOR =  1.0f;
 
+    /**
+     * Value used to smooth the zoom transition
+     */
     public static final int DEFAULT_ZOOM_SMOOTHER_VALUE = 10;
 
+    /**
+     * Zoom progress value
+     */
     public static final float DEFAULT_ZOOM_BAR_PROGRESS = 1f / DEFAULT_ZOOM_SMOOTHER_VALUE;
-
-
 }
