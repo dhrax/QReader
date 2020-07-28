@@ -35,4 +35,14 @@ public class Constants {
      * Zoom progress value
      */
     public static final float DEFAULT_ZOOM_BAR_PROGRESS = 1f / DEFAULT_ZOOM_SMOOTHER_VALUE;
+
+    /**
+     * Id of our front camera.
+     */
+    public static final String CAMERA_FRONT = "1";
+
+    /**
+     * Id of our back camera.
+     */
+    public static final String CAMERA_BACK = "0";
 }

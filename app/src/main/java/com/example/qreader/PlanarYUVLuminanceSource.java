@@ -1,6 +1,10 @@
 package com.example.qreader;
 
 import com.google.zxing.LuminanceSource;
+
+/**
+ * Substitute of {@link com.google.zxing.PlanarYUVLuminanceSource}
+ */
 @Deprecated
 final class PlanarYUVLuminanceSource extends LuminanceSource {
 

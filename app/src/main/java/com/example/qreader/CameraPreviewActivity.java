@@ -28,6 +28,8 @@ import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.View;
+import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
@@ -39,11 +41,11 @@ import androidx.core.content.ContextCompat;
 import androidx.core.math.MathUtils;
 
 import com.google.zxing.BinaryBitmap;
+import com.google.zxing.PlanarYUVLuminanceSource;
 import com.google.zxing.ReaderException;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
-import com.google.zxing.PlanarYUVLuminanceSource;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -55,14 +57,18 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import static android.graphics.ImageFormat.YUV_420_888;
+import static android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE;
 import static android.hardware.camera2.CameraCharacteristics.LENS_FACING;
+import static android.hardware.camera2.CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM;
 import static android.hardware.camera2.CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP;
-import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH;
+import static android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AF_STATE_ACTIVE_SCAN;
-import static android.hardware.camera2.CaptureRequest.CONTROL_AE_MODE;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE;
 import static android.hardware.camera2.CaptureRequest.SCALER_CROP_REGION;
+import static android.view.View.GONE;
+import static android.view.View.VISIBLE;
 import static android.widget.Toast.LENGTH_SHORT;
+import static com.example.qreader.Constants.CAMERA_BACK;
 import static com.example.qreader.Constants.DEFAULT_ZOOM_BAR_PROGRESS;
 import static com.example.qreader.Constants.DEFAULT_ZOOM_FACTOR;
 import static com.example.qreader.Constants.DEFAULT_ZOOM_SMOOTHER_VALUE;
@@ -70,8 +76,8 @@ import static com.example.qreader.Constants.MAX_PREVIEW_HEIGHT;
 import static com.example.qreader.Constants.MAX_PREVIEW_WIDTH;
 import static com.example.qreader.Constants.REQUEST_CAMERA_PERMISSION;
 
-//TODO add interface functions
-public class CameraPreviewActivity extends AppCompatActivity {
+//TODO add image scan
+public class CameraPreviewActivity extends AppCompatActivity implements View.OnClickListener {
 
     /**
      * Tag for the {@link Log}.
@@ -94,6 +100,23 @@ public class CameraPreviewActivity extends AppCompatActivity {
     private SeekBar zoomBar;
 
     /**
+     * An {@link ImageButton} to switch between our front and our back cameras.
+     */
+    private ImageButton switchCamera;
+
+    /**
+     * An {@link ImageButton} to toggle the flash in our camera.
+     */
+    private ImageButton toggleFlash;
+
+    /**
+     * Integer that saves our camera facing direction.
+     * <br>
+     * See: {@link CameraCharacteristics#LENS_FACING}
+     */
+    private int mCameraLensFacingDirection;
+
+    /**
      * The {@link android.util.Size} of camera preview.
      */
     private Size mPreviewSize;
@@ -114,6 +137,11 @@ public class CameraPreviewActivity extends AppCompatActivity {
     private boolean mFlashSupported;
 
     /**
+     * Whether the flash is turned on or off.
+     */
+    private boolean mIsFlashOn;
+
+    /**
      * Whether the current camera device supports Zoom or not.
      */
     private boolean mZoomSupported;
@@ -122,6 +150,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
      * Max zoom value supported by the {@link CameraDevice}.
      */
     public float maxZoom;
+
     private Rect mSensorSize;
     private Rect mCropRegion = new Rect();
 
@@ -200,7 +229,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
                         int width = img.getWidth();
                         int height = img.getHeight();
                         //Deprecated: PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(data, width, height);
-                        PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(data, width,height, 0, 0, width, height, false);
+                        PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(data, width, height, 0, 0, width, height, false);
                         BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
 
                         rawResult = mQrReader.decode(bitmap);
@@ -274,7 +303,6 @@ public class CameraPreviewActivity extends AppCompatActivity {
 
     };
 
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -282,6 +310,11 @@ public class CameraPreviewActivity extends AppCompatActivity {
 
         mTextureView = findViewById(R.id.texture);
         zoomBar = findViewById(R.id.zoomBar);
+
+        switchCamera = findViewById(R.id.switchCamera);
+        toggleFlash = findViewById(R.id.toggleFlash);
+
+        mIsFlashOn = false;
 
         mQrReader = new QRCodeReader();
 
@@ -295,7 +328,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress,
                                           boolean fromUser) {
-                if (mZoomSupported && mPreviewRequestBuilder != null) {
+                if (mZoomSupported && mPreviewRequestBuilder != null && mCaptureSession != null) {
                     //We add DEFAULT_ZOOM_SMOOTHER_VALUE to the progress so the first section (0 * DEFAULT_ZOOM_SMOOTHER_VALUE)
                     // and the second one (1 * DEFAULT_ZOOM_SMOOTHER_VALUE) don't stay in the same zoom level
                     setZoom((progress + DEFAULT_ZOOM_SMOOTHER_VALUE) * DEFAULT_ZOOM_BAR_PROGRESS);
@@ -311,10 +344,45 @@ public class CameraPreviewActivity extends AppCompatActivity {
             }
 
         });
+
+        switchCamera.setOnClickListener(this);
+        toggleFlash.setOnClickListener(this);
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.switchCamera:
+                switchCameras();
+                break;
+            case R.id.toggleFlash:
+                if (mFlashSupported) {
+                    mIsFlashOn = !mIsFlashOn;
+                    setFlash();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * Switch between our front camera and our back camera.
+     */
+    private void switchCameras() {
+        if (mCameraLensFacingDirection == CameraCharacteristics.LENS_FACING_BACK) {
+            mCameraLensFacingDirection = CameraCharacteristics.LENS_FACING_FRONT;
+        } else if (mCameraLensFacingDirection == CameraCharacteristics.LENS_FACING_FRONT) {
+            mCameraLensFacingDirection = CameraCharacteristics.LENS_FACING_BACK;
+        }
+
+        closeCamera();
+        reopenCamera();
     }
 
     /**
      * Method that changes the zoom value of our {@link CameraDevice}.
+     *
      * @param zoom new zoom value
      */
     private void setZoom(float zoom) {
@@ -346,15 +414,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
         super.onResume();
         startBackgroundThread();
 
-        // When the screen is turned off and turned back on, the SurfaceTexture is already
-        // available, and "onSurfaceTextureAvailable" will not be called. In that case, we can open
-        // a camera and start preview from here (otherwise, we wait until the surface is ready in
-        // the SurfaceTextureListener).
-        if (mTextureView.isAvailable()) {
-            openCamera(mTextureView.getWidth(), mTextureView.getHeight());
-        } else {
-            mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
-        }
+        reopenCamera();
     }
 
     @Override
@@ -399,8 +459,6 @@ public class CameraPreviewActivity extends AppCompatActivity {
                             try {
                                 // Auto focus should be continuous for camera preview.
                                 mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_STATE_ACTIVE_SCAN);
-                                // Flash is automatically enabled when necessary.
-                                setAutoFlash(mPreviewRequestBuilder);
 
                                 // Finally, we start displaying the camera preview.
                                 mPreviewRequest = mPreviewRequestBuilder.build();
@@ -441,7 +499,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
             assert manager != null;
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
             //We subtract 1 to the maxZoom value because we start from 0
-            zoomBar.setMax(((int) maxZoom * DEFAULT_ZOOM_SMOOTHER_VALUE) - 1);
+            zoomBar.setMax(((int) maxZoom - 1) * DEFAULT_ZOOM_SMOOTHER_VALUE);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -488,30 +546,16 @@ public class CameraPreviewActivity extends AppCompatActivity {
 
                 Integer facing = characteristics.get(LENS_FACING);
                 //LENS_FACING_BACK == Front camera -- LENS_FACING_FRONT == Back camera
-                //TODO implement front camera qr
-                if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT)
+                if (facing != null && facing != mCameraLensFacingDirection)
                     continue;
 
                 StreamConfigurationMap map = characteristics.get(SCALER_STREAM_CONFIGURATION_MAP);
                 if (map == null)
                     continue;
 
-                mSensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                zoomSettings(characteristics);
 
-                if (mSensorSize == null) {
-                    maxZoom = DEFAULT_ZOOM_FACTOR;
-                    mZoomSupported = false;
-                }else {
-                    final Float value = characteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
-
-                    maxZoom = ((value == null) || (value < DEFAULT_ZOOM_FACTOR)) ? DEFAULT_ZOOM_FACTOR : value;
-
-                    mZoomSupported = (Float.compare(maxZoom, DEFAULT_ZOOM_FACTOR) > 0);
-
-                    // Check if the flash is supported.
-                    Boolean available = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
-                    mFlashSupported = available == null ? false : available;
-                }
+                flashSettings(characteristics, cameraId);
 
                 int mImageformat = YUV_420_888;
 
@@ -531,7 +575,6 @@ public class CameraPreviewActivity extends AppCompatActivity {
                 if (maxPreviewHeight > MAX_PREVIEW_HEIGHT)
                     maxPreviewHeight = MAX_PREVIEW_HEIGHT;
 
-
                 // Danger! Attempting to use too large a preview size could  exceed the camera
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
                 // garbage capture data.
@@ -542,8 +585,7 @@ public class CameraPreviewActivity extends AppCompatActivity {
                 if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
                     mTextureView.setAspectRatio(mPreviewSize.getWidth(), mPreviewSize.getHeight());
                 } else {
-                    mTextureView.setAspectRatio(
-                            mPreviewSize.getHeight(), mPreviewSize.getWidth());
+                    mTextureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 }
 
                 mCameraId = cameraId;
@@ -556,6 +598,123 @@ public class CameraPreviewActivity extends AppCompatActivity {
             // device this code runs.
             Toast.makeText(CameraPreviewActivity.this, "Camera2 API not supported on this device", Toast.LENGTH_LONG).show();
         }
+    }
+
+    /**
+     * Father method of all zoom's methods related.
+     *
+     * @param characteristics {@link CameraCharacteristics} of our {@link CameraDevice}
+     *                        <br><br>
+     *                        See also:
+     *                        <br>
+     *                        {@link #isZoomSupported(CameraCharacteristics)}
+     *                        <br>
+     *                        {@link #setUpZoomBar()}
+     */
+    private void zoomSettings(CameraCharacteristics characteristics) {
+        isZoomSupported(characteristics);
+
+        setUpZoomBar();
+    }
+
+    /**
+     * Whether zoom is supported or not.
+     *
+     * @param characteristics {@link CameraCharacteristics} of our {@link CameraDevice}
+     */
+    private void isZoomSupported(CameraCharacteristics characteristics) {
+        mSensorSize = characteristics.get(SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+
+        if (mSensorSize == null) {
+            maxZoom = DEFAULT_ZOOM_FACTOR;
+            mZoomSupported = false;
+        } else {
+            final Float value = characteristics.get(SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
+
+            maxZoom = ((value == null) || (value < DEFAULT_ZOOM_FACTOR)) ? DEFAULT_ZOOM_FACTOR : value;
+
+            mZoomSupported = (Float.compare(maxZoom, DEFAULT_ZOOM_FACTOR) > 0);
+        }
+    }
+
+    /**
+     * Set the visibility of our {@link SeekBar} depending of whether zoom is supported or not by the actual {@link CameraDevice}.
+     */
+    public void setUpZoomBar() {
+        if (mZoomSupported) {
+            zoomBar.setVisibility(VISIBLE);
+        } else {
+            zoomBar.setVisibility(GONE);
+        }
+    }
+
+    /**
+     * Father method of all flash's methods related.
+     *
+     * @param characteristics {@link CameraCharacteristics} of our {@link CameraDevice}
+     * @param cameraId        id of our {@link CameraDevice}
+     *                        <br><br>
+     *                        See also:
+     *                        <br>
+     *                        {@link #isFlashSupported(CameraCharacteristics)}
+     *                        <br>
+     *                        {@link #setupFlashButton(String)}
+     */
+    private void flashSettings(CameraCharacteristics characteristics, String cameraId) {
+        isFlashSupported(characteristics);
+
+        setupFlashButton(cameraId);
+    }
+
+    /**
+     * Whether we have to turn the flash on or not
+     */
+    private void setFlash() {
+        if (mIsFlashOn) {
+            mPreviewRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH);
+            try {
+                mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, null);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+            toggleFlash.setImageResource(R.drawable.flash);
+        } else {
+            mPreviewRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
+            try {
+                mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, null);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+            toggleFlash.setImageResource(R.drawable.flash_off);
+        }
+    }
+
+    /**
+     * Set the visibility of our flash {@link ImageButton} depending of whether flash is supported or not by the actual {@link CameraDevice}.
+     */
+    public void setupFlashButton(String cameraId) {
+        if (cameraId.equals(CAMERA_BACK) && mFlashSupported) {
+            toggleFlash.setVisibility(VISIBLE);
+
+            if (mIsFlashOn) {
+                toggleFlash.setImageResource(R.drawable.flash);
+            } else {
+                toggleFlash.setImageResource(R.drawable.flash_off);
+            }
+
+        } else {
+            toggleFlash.setVisibility(GONE);
+        }
+    }
+
+    /**
+     * Whether flash is supported or not.
+     *
+     * @param characteristics {@link CameraCharacteristics} of our {@link CameraDevice}
+     */
+    private void isFlashSupported(CameraCharacteristics characteristics) {
+        Boolean available = characteristics.get(FLASH_INFO_AVAILABLE);
+        mFlashSupported = available == null ? false : available;
     }
 
     private void requestCameraPermission() {
@@ -735,12 +894,18 @@ public class CameraPreviewActivity extends AppCompatActivity {
     }
 
     /**
-     * Set the flash automatically when in low light conditions
-     * @param requestBuilder {@link CaptureRequest.Builder} of the actual {@link CameraDevice}
+     * Whether we have to open our camera or we have to wait until the surface is ready in
+     * the {@link android.view.TextureView.SurfaceTextureListener}
      */
-    private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
-        if (mFlashSupported) {
-            requestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_ON_AUTO_FLASH);
+    private void reopenCamera() {
+        // When the screen is turned off and turned back on, the SurfaceTexture is already
+        // available, and "onSurfaceTextureAvailable" will not be called. In that case, we can open
+        // a camera and start preview from here (otherwise, we wait until the surface is ready in
+        // the SurfaceTextureListener).
+        if (mTextureView.isAvailable()) {
+            openCamera(mTextureView.getWidth(), mTextureView.getHeight());
+        } else {
+            mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
     }
 
