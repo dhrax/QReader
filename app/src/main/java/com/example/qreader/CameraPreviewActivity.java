@@ -1,10 +1,11 @@
 package com.example.qreader;
 
 import android.Manifest;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.Rect;
@@ -21,11 +22,13 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Size;
+import android.view.MenuItem;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -34,25 +37,28 @@ import android.widget.SeekBar;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.math.MathUtils;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 
+import com.google.android.material.navigation.NavigationView;
 import com.google.zxing.BinaryBitmap;
+import com.google.zxing.ChecksumException;
+import com.google.zxing.FormatException;
+import com.google.zxing.LuminanceSource;
+import com.google.zxing.NotFoundException;
 import com.google.zxing.PlanarYUVLuminanceSource;
-import com.google.zxing.ReaderException;
-import com.google.zxing.Result;
+import com.google.zxing.RGBLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -67,6 +73,7 @@ import static android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE;
 import static android.hardware.camera2.CaptureRequest.SCALER_CROP_REGION;
 import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
+import static android.widget.Toast.LENGTH_LONG;
 import static android.widget.Toast.LENGTH_SHORT;
 import static com.example.qreader.Constants.CAMERA_BACK;
 import static com.example.qreader.Constants.DEFAULT_ZOOM_BAR_PROGRESS;
@@ -75,9 +82,12 @@ import static com.example.qreader.Constants.DEFAULT_ZOOM_SMOOTHER_VALUE;
 import static com.example.qreader.Constants.MAX_PREVIEW_HEIGHT;
 import static com.example.qreader.Constants.MAX_PREVIEW_WIDTH;
 import static com.example.qreader.Constants.REQUEST_CAMERA_PERMISSION;
+import static com.example.qreader.Constants.REQUEST_READ_EXTERNAL_STORAGE_PERMISSION;
+import static com.example.qreader.Constants.RESULT_LOAD_IMG;
 
-//TODO add image scan
-public class CameraPreviewActivity extends AppCompatActivity implements View.OnClickListener {
+//TODO save last camera used
+//fixme large images take too much time to process
+public class CameraPreviewActivity extends AppCompatActivity implements View.OnClickListener, NavigationView.OnNavigationItemSelectedListener {
 
     /**
      * Tag for the {@link Log}.
@@ -108,6 +118,16 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      * An {@link ImageButton} to toggle the flash in our camera.
      */
     private ImageButton toggleFlash;
+
+    /**
+     * A {@link NavigationView} to access other functions inside our {@link CameraPreviewActivity}.
+     */
+    NavigationView navigationView;
+
+    /**
+     * A {@link DrawerLayout} inside our {@link CameraPreviewActivity}.
+     */
+    DrawerLayout drawerLayout;
 
     /**
      * Integer that saves our camera facing direction.
@@ -151,7 +171,15 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      */
     public float maxZoom;
 
+    /**
+     * See {@link CameraCharacteristics#SENSOR_INFO_ACTIVE_ARRAY_SIZE}.
+     */
     private Rect mSensorSize;
+
+    /**
+     * A {@link Rect}angle which takes the cropped size (in pixels) of our camera when the {@link CameraPreviewActivity#mSensorSize}
+     * has been changed.
+     */
     private Rect mCropRegion = new Rect();
 
     /**
@@ -220,23 +248,24 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 @Override
                 public void onImageAvailable(ImageReader reader) {
                     Image img = reader.acquireLatestImage();
-                    Result rawResult;
                     try {
-                        if (img == null) throw new NullPointerException("cannot be null");
+                        if (img == null)
+                            throw new NullPointerException("img cannot be null.");
+
+                        int width = img.getWidth();
+                        int height = img.getHeight();
                         ByteBuffer buffer = img.getPlanes()[0].getBuffer();
                         byte[] data = new byte[buffer.remaining()];
                         buffer.get(data);
-                        int width = img.getWidth();
-                        int height = img.getHeight();
+
                         //Deprecated: PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(data, width, height);
                         PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(data, width, height, 0, 0, width, height, false);
-                        BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+                        decodeBitmap(source);
 
-                        rawResult = mQrReader.decode(bitmap);
-                        onQRCodeRead(rawResult.getText());
-                    } catch (ReaderException ignored) {
-                    } catch (NullPointerException ex) {
+                    } catch (NullPointerException | FormatException | ChecksumException | NotFoundException ex) {
                         ex.printStackTrace();
+                        if (ex.getMessage() != null)
+                            Log.e(TAG, ex.getMessage());
                     } finally {
                         mQrReader.reset();
                         if (img != null)
@@ -245,6 +274,20 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 }
 
             };
+
+    /**
+     * Method used to decode an image ({@link BinaryBitmap}) into a link.
+     *
+     * @param source A {@link PlanarYUVLuminanceSource} object if we are decoding an image from the camera
+     *               or a {@link RGBLuminanceSource} if we are decoding a still image (which isn't created by our camera).
+     * @throws FormatException
+     * @throws ChecksumException
+     * @throws NotFoundException
+     */
+    private void decodeBitmap(LuminanceSource source) throws FormatException, ChecksumException, NotFoundException {
+        BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+        onQRCodeRead(mQrReader.decode(bitmap).getText());
+    }
 
     /**
      * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
@@ -313,12 +356,23 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
         switchCamera = findViewById(R.id.switchCamera);
         toggleFlash = findViewById(R.id.toggleFlash);
+        drawerLayout = findViewById(R.id.drawerLayout);
+        navigationView = findViewById(R.id.navigationView);
 
         mIsFlashOn = false;
 
         mQrReader = new QRCodeReader();
 
         createListeners();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
     }
 
     private void createListeners() {
@@ -347,6 +401,60 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
         switchCamera.setOnClickListener(this);
         toggleFlash.setOnClickListener(this);
+        navigationView.setNavigationItemSelectedListener(this);
+    }
+
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
+        //TODO implement other functions
+        switch (menuItem.getItemId()) {
+            case R.id.nav_gallery:
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermission(Manifest.permission.READ_EXTERNAL_STORAGE, REQUEST_READ_EXTERNAL_STORAGE_PERMISSION);
+                } else {
+                    openGallery();
+                }
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+
+    @Override
+    protected void onActivityResult(int reqCode, int resultCode, Intent data) {
+        super.onActivityResult(reqCode, resultCode, data);
+
+        if (reqCode == RESULT_LOAD_IMG && resultCode == RESULT_OK && data != null) {
+            try {
+                final Uri imageUri = data.getData();
+                if (imageUri == null)
+                    throw new NullPointerException("imageUri cannot be null.");
+
+                final Bitmap selectedImage = BitmapFactory.decodeFile(FetchPath.getPath(this, imageUri));
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                selectedImage.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                int[] intArray = new int[selectedImage.getWidth() * selectedImage.getHeight()];
+                selectedImage.getPixels(intArray, 0, selectedImage.getWidth(), 0, 0, selectedImage.getWidth(), selectedImage.getHeight());
+                LuminanceSource source = new RGBLuminanceSource(selectedImage.getWidth(), selectedImage.getHeight(), intArray);
+                decodeBitmap(source);
+
+            } catch (FormatException e) {
+                Toast.makeText(this, "Barcode with errors detected.", LENGTH_LONG).show();
+                e.printStackTrace();
+            } catch (ChecksumException e) {
+                Toast.makeText(this, "Barcode checksum failed.", LENGTH_LONG).show();
+                e.printStackTrace();
+            } catch (NotFoundException e) {
+                Toast.makeText(this, "A QR code has not been found.", LENGTH_LONG).show();
+                e.printStackTrace();
+            } finally {
+                mQrReader.reset();
+            }
+
+        } else {
+            Toast.makeText(this, "You haven't picked an image.", LENGTH_LONG).show();
+        }
     }
 
     @Override
@@ -484,9 +592,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      * Opens the camera specified by {@link CameraPreviewActivity#mCameraId}.
      */
     private void openCamera(int width, int height) {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestCameraPermission();
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestPermission(Manifest.permission.CAMERA, REQUEST_CAMERA_PERMISSION);
             return;
         }
         setUpCameraOutputs(width, height);
@@ -560,7 +667,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 int mImageformat = YUV_420_888;
 
                 // For still image captures, we use the largest available size.
-                Size largest = Collections.max(Arrays.asList(map.getOutputSizes(mImageformat)), new CompareSizesByArea());
+                Size largest = Collections.max(Arrays.asList(map.getOutputSizes(mImageformat)), new Util.CompareSizesByArea());
                 mImageReader = ImageReader.newInstance(largest.getWidth() / 16, largest.getHeight() / 16, mImageformat, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
 
@@ -578,7 +685,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 // Danger! Attempting to use too large a preview size could  exceed the camera
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
                 // garbage capture data.
-                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, maxPreviewWidth, maxPreviewHeight, largest);
+                mPreviewSize = Util.chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, maxPreviewWidth, maxPreviewHeight, largest);
 
                 // We fit the aspect ratio of TextureView to the size of preview we picked.
                 int orientation = getResources().getConfiguration().orientation;
@@ -596,7 +703,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         } catch (NullPointerException e) {
             // Currently an NPE is thrown when the Camera2API is used but not supported on the
             // device this code runs.
-            Toast.makeText(CameraPreviewActivity.this, "Camera2 API not supported on this device", Toast.LENGTH_LONG).show();
+            Toast.makeText(CameraPreviewActivity.this, "Camera2 API not supported on this device", LENGTH_LONG).show();
         }
     }
 
@@ -717,40 +824,43 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         mFlashSupported = available == null ? false : available;
     }
 
-    private void requestCameraPermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
-            new AlertDialog.Builder(CameraPreviewActivity.this)
-                    .setMessage("Allow this application to use the camera?")
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            ActivityCompat.requestPermissions(CameraPreviewActivity.this,
-                                    new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
-                        }
-                    })
-                    .setNegativeButton(android.R.string.cancel,
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    finish();
-                                }
-                            })
-                    .create();
+    private void openGallery() {
+        Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
+        photoPickerIntent.setType("image/*");
+        startActivityForResult(photoPickerIntent, RESULT_LOAD_IMG);
+        Log.d(TAG, "Abriendo galería");
+    }
 
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
-        }
+    /**
+     * Generic method to request permissions from the user.
+     *
+     * @param permission   android.permission.* style-string
+     * @param permissionID ID of the permission we want to request
+     */
+    private void requestPermission(String permission, int permissionID) {
+        ActivityCompat.requestPermissions(this, new String[]{permission}, permissionID);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_CAMERA_PERMISSION) {
-            if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(CameraPreviewActivity.this, "ERROR: Camera permissions not granted", Toast.LENGTH_LONG).show();
-            }
-        } else {
-            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case REQUEST_CAMERA_PERMISSION:
+                if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(CameraPreviewActivity.this, "ERROR: Camera permissions not granted", LENGTH_LONG).show();
+                    finish();
+                }
+                break;
+            case REQUEST_READ_EXTERNAL_STORAGE_PERMISSION:
+                if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(CameraPreviewActivity.this, "ERROR: External storage permissions not granted", LENGTH_LONG).show();
+                } else {
+                    openGallery();
+                }
+                break;
+            default:
+                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                break;
         }
     }
 
@@ -774,51 +884,6 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             mBackgroundHandler = null;
         } catch (InterruptedException e) {
             e.printStackTrace();
-        }
-    }
-
-    /**
-     * Given {@code choices} of {@code Size}s supported by a camera, choose the smallest one that
-     * is at least as large as the respective texture view size, and that is at most as large as the
-     * respective max size, and whose aspect ratio matches with the specified value. If such size
-     * doesn't exist, choose the largest one that is at most as large as the respective max size,
-     * and whose aspect ratio matches with the specified value.
-     *
-     * @param choices           The list of sizes that the camera supports for the intended output
-     *                          class
-     * @param textureViewWidth  The width of the texture view relative to sensor coordinate
-     * @param textureViewHeight The height of the texture view relative to sensor coordinate
-     * @param maxWidth          The maximum width that can be chosen
-     * @param maxHeight         The maximum height that can be chosen
-     * @param aspectRatio       The aspect ratio
-     * @return The optimal {@code Size}, or an arbitrary one if none were big enough
-     */
-    private static Size chooseOptimalSize(Size[] choices, int textureViewWidth,
-                                          int textureViewHeight, int maxWidth, int maxHeight, Size aspectRatio) {
-
-        // Collect the supported resolutions that are at least as big as the preview Surface
-        List<Size> bigEnough = new ArrayList<>();
-        // Collect the supported resolutions that are smaller than the preview Surface
-        List<Size> notBigEnough = new ArrayList<>();
-        for (Size option : choices) {
-            if (option.getWidth() <= maxWidth && option.getHeight() <= maxHeight) {
-                if (option.getWidth() >= textureViewWidth && option.getHeight() >= textureViewHeight) {
-                    bigEnough.add(option);
-                } else {
-                    notBigEnough.add(option);
-                }
-            }
-        }
-
-        // Pick the smallest of those big enough. If there is no one big enough, pick the
-        // largest of those not big enough.
-        if (bigEnough.size() > 0) {
-            return Collections.min(bigEnough, new CompareSizesByArea());
-        } else if (notBigEnough.size() > 0) {
-            return Collections.max(notBigEnough, new CompareSizesByArea());
-        } else {
-            Log.e("Camera2", "Couldn't find any suitable preview size");
-            return choices[0];
         }
     }
 
@@ -852,18 +917,6 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             matrix.postRotate(180, centerX, centerY);
         }
         mTextureView.setTransform(matrix);
-    }
-
-    /**
-     * Compares two {@code Size}s based on their areas.
-     */
-    static class CompareSizesByArea implements Comparator<Size> {
-
-        @Override
-        public int compare(Size lhs, Size rhs) {
-            // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() - (long) rhs.getWidth() * rhs.getHeight());
-        }
     }
 
     /**

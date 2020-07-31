@@ -1,9 +1,6 @@
 package com.example.qreader;
 
 import android.os.Bundle;
-
-import androidx.fragment.app.Fragment;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,9 +11,11 @@ import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.fragment.app.Fragment;
+
 public class WebViewFragment extends Fragment {
 
-    WebView linkWebView;
+    public static WebView linkWebView;
     ProgressBar progressBar;
     TextView loadingTextView;
     private String linkReceived;
@@ -52,7 +51,7 @@ public class WebViewFragment extends Fragment {
     private void webViewCharacteristics() {
         linkWebView.setWebChromeClient(new WebChromeClient() {
             public void onProgressChanged(WebView view, int progress) {
-                if(progress < 100 && progressBar.getVisibility() == ProgressBar.GONE){
+                if (progress < 100 && progressBar.getVisibility() == ProgressBar.GONE) {
                     progressBar.setVisibility(ProgressBar.VISIBLE);
                     loadingTextView.setVisibility(View.VISIBLE);
                     linkWebView.setVisibility(View.INVISIBLE);
@@ -60,7 +59,7 @@ public class WebViewFragment extends Fragment {
 
                 progressBar.setProgress(progress);
 
-                if(progress == 100){
+                if (progress == 100) {
                     progressBar.setVisibility(ProgressBar.GONE);
                     loadingTextView.setVisibility(View.GONE);
                     linkWebView.setVisibility(View.VISIBLE);

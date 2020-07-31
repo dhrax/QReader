@@ -3,4 +3,9 @@
     <string name="loading">Loading...</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="gallery">Gallery</string>
+    <string name="settings">Settings</string>
+    <string name="share">Share</string>
+    <string name="send_code">Send code</string>
+    <string name="contact">Contact us</string>
 </resources>
