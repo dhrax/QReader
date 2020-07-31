@@ -406,13 +406,41 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-        //TODO implement other functions
         switch (menuItem.getItemId()) {
             case R.id.nav_gallery:
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     requestPermission(Manifest.permission.READ_EXTERNAL_STORAGE, REQUEST_READ_EXTERNAL_STORAGE_PERMISSION);
                 } else {
                     openGallery();
+                }
+                break;
+            case R.id.nav_manage:
+                //TODO implement
+                break;
+            case R.id.nav_share:
+                //TODO upload app
+                try {
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("text/plain");
+                    shareIntent.putExtra(Intent.EXTRA_SUBJECT, "QReader");
+                    String shareMessage = "\nThis app is great, you should check it out!!\n\n";
+                    //shareMessage = shareMessage + "https://play.google.com/store/apps/details?id=" + BuildConfig.APPLICATION_ID +"\n\n";
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, shareMessage);
+                    startActivity(Intent.createChooser(shareIntent, "Choose one"));
+                } catch (Exception ignored) {
+
+                }
+                break;
+            case R.id.nav_send:
+                //TODO implement
+                break;
+            case R.id.nav_email:
+                Intent intent = new Intent(Intent.ACTION_SENDTO);
+                intent.setData(Uri.parse("mailto:")); // only email apps should handle this
+                intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"some@email.address"});
+                intent.putExtra(Intent.EXTRA_SUBJECT, "I would like to talk about...");
+                if (intent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(intent);
                 }
                 break;
             default:
