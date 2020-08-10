@@ -47,6 +47,11 @@ public class Constants {
     public static final float DEFAULT_ZOOM_BAR_PROGRESS = 1f / DEFAULT_ZOOM_SMOOTHER_VALUE;
 
     /**
+     * Constant that changes the zoom when clicking on the icons.
+     */
+    public static final int ZOOM_CHANGE_VALUE = 1;
+
+    /**
      * Id of our front camera.
      */
     public static final String CAMERA_FRONT = "1";

@@ -11,6 +11,7 @@ import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 public class WebViewFragment extends Fragment {
@@ -25,8 +26,7 @@ public class WebViewFragment extends Fragment {
     }
 
     public static WebViewFragment newInstance(String linkReceived) {
-        WebViewFragment fragment = new WebViewFragment(linkReceived);
-        return fragment;
+        return new WebViewFragment(linkReceived);
     }
 
     @Override
@@ -37,7 +37,7 @@ public class WebViewFragment extends Fragment {
     }
 
     @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         linkWebView = view.findViewById(R.id.linkWebView);
         progressBar = view.findViewById(R.id.progressBar);

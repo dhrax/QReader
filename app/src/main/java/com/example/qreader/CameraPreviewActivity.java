@@ -34,6 +34,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
+import android.widget.Space;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -86,6 +87,7 @@ import static com.example.qreader.Constants.REQUEST_READ_EXTERNAL_STORAGE_PERMIS
 import static com.example.qreader.Constants.RESULT_LOAD_IMG;
 
 //TODO save last camera used
+//TODO preferences
 //fixme large images take too much time to process
 public class CameraPreviewActivity extends AppCompatActivity implements View.OnClickListener, NavigationView.OnNavigationItemSelectedListener {
 
@@ -104,10 +106,14 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      */
     private AutoFitTextureView mTextureView;
 
+    private ImageButton zoomOut;
+
     /**
      * A {@link SeekBar} to manage the zoom level.
      */
     private SeekBar zoomBar;
+
+    private ImageButton zoomIn;
 
     /**
      * An {@link ImageButton} to switch between our front and our back cameras.
@@ -118,6 +124,11 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      * An {@link ImageButton} to toggle the flash in our camera.
      */
     private ImageButton toggleFlash;
+
+    /**
+     * A {@link Space} used to separate {@link CameraPreviewActivity#switchCamera} and {@link CameraPreviewActivity#toggleFlash}.
+     */
+    private Space spacerTop;
 
     /**
      * A {@link NavigationView} to access other functions inside our {@link CameraPreviewActivity}.
@@ -191,14 +202,14 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 }
 
                 @Override
-                public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request,
-                                                CaptureResult partialResult) {
+                public void onCaptureProgressed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request,
+                                                @NonNull CaptureResult partialResult) {
                     process(partialResult);
                 }
 
                 @Override
-                public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
-                                               TotalCaptureResult result) {
+                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request,
+                                               @NonNull TotalCaptureResult result) {
                     process(result);
                 }
 
@@ -247,8 +258,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
-                    Image img = reader.acquireLatestImage();
-                    try {
+                    try (Image img = reader.acquireLatestImage()) {
                         if (img == null)
                             throw new NullPointerException("img cannot be null.");
 
@@ -268,8 +278,6 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                             Log.e(TAG, ex.getMessage());
                     } finally {
                         mQrReader.reset();
-                        if (img != null)
-                            img.close();
                     }
                 }
 
@@ -352,10 +360,13 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         setContentView(R.layout.activity_camera_preview);
 
         mTextureView = findViewById(R.id.texture);
+        zoomOut = findViewById(R.id.zoomOut);
         zoomBar = findViewById(R.id.zoomBar);
+        zoomIn = findViewById(R.id.zoomIn);
 
         switchCamera = findViewById(R.id.switchCamera);
         toggleFlash = findViewById(R.id.toggleFlash);
+        spacerTop = findViewById(R.id.spacerTop);
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navigationView);
 
@@ -399,6 +410,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
         });
 
+        zoomOut.setOnClickListener(this);
+        zoomIn.setOnClickListener(this);
         switchCamera.setOnClickListener(this);
         toggleFlash.setOnClickListener(this);
         navigationView.setNavigationItemSelectedListener(this);
@@ -414,25 +427,18 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                     openGallery();
                 }
                 break;
-            case R.id.nav_manage:
-                //TODO implement
-                break;
             case R.id.nav_share:
-                //TODO upload app
                 try {
                     Intent shareIntent = new Intent(Intent.ACTION_SEND);
                     shareIntent.setType("text/plain");
                     shareIntent.putExtra(Intent.EXTRA_SUBJECT, "QReader");
-                    String shareMessage = "\nThis app is great, you should check it out!!\n\n";
-                    //shareMessage = shareMessage + "https://play.google.com/store/apps/details?id=" + BuildConfig.APPLICATION_ID +"\n\n";
+                    String shareMessage = "This app is great, you should check it out!!\n\n";
+                    shareMessage = shareMessage + "https://play.google.com/store/apps/details?id=" + BuildConfig.APPLICATION_ID + "\n\n";
                     shareIntent.putExtra(Intent.EXTRA_TEXT, shareMessage);
                     startActivity(Intent.createChooser(shareIntent, "Choose one"));
                 } catch (Exception ignored) {
 
                 }
-                break;
-            case R.id.nav_send:
-                //TODO implement
                 break;
             case R.id.nav_email:
                 Intent intent = new Intent(Intent.ACTION_SENDTO);
@@ -495,6 +501,22 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 if (mFlashSupported) {
                     mIsFlashOn = !mIsFlashOn;
                     setFlash();
+                }
+                break;
+            case R.id.zoomOut:
+                if (zoomBar.getProgress() >= Constants.ZOOM_CHANGE_VALUE) {
+                    zoomBar.setProgress(zoomBar.getProgress() - Constants.ZOOM_CHANGE_VALUE);
+                    setZoom((zoomBar.getProgress() + DEFAULT_ZOOM_SMOOTHER_VALUE) * DEFAULT_ZOOM_BAR_PROGRESS);
+                } else if (zoomBar.getProgress() > 0) {
+                    setZoom(0);
+                }
+                break;
+            case R.id.zoomIn:
+                if (zoomBar.getProgress() <= zoomBar.getMax() - Constants.ZOOM_CHANGE_VALUE) {
+                    zoomBar.setProgress(zoomBar.getProgress() + Constants.ZOOM_CHANGE_VALUE);
+                    setZoom((zoomBar.getProgress() + DEFAULT_ZOOM_SMOOTHER_VALUE) * DEFAULT_ZOOM_BAR_PROGRESS);
+                } else if (zoomBar.getProgress() < zoomBar.getMax()) {
+                    setZoom(zoomBar.getMax());
                 }
                 break;
             default:
@@ -635,6 +657,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
             //We subtract 1 to the maxZoom value because we start from 0
             zoomBar.setMax(((int) maxZoom - 1) * DEFAULT_ZOOM_SMOOTHER_VALUE);
+            Log.d("DEBUG", String.valueOf(zoomBar.getMax()));
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -676,6 +699,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     private void setUpCameraOutputs(int width, int height) {
         CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
         try {
+            assert manager != null;
             for (String cameraId : manager.getCameraIdList()) {
                 CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
 
@@ -830,6 +854,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     public void setupFlashButton(String cameraId) {
         if (cameraId.equals(CAMERA_BACK) && mFlashSupported) {
             toggleFlash.setVisibility(VISIBLE);
+            spacerTop.setVisibility(VISIBLE);
 
             if (mIsFlashOn) {
                 toggleFlash.setImageResource(R.drawable.flash);
@@ -839,6 +864,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
         } else {
             toggleFlash.setVisibility(GONE);
+            spacerTop.setVisibility(GONE);
         }
     }
 
