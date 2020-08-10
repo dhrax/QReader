@@ -1,4 +1,4 @@
-package com.example.qreader;
+package com.daisa.qreader;
 
 import android.util.Log;
 import android.util.Size;

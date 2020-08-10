@@ -1,4 +1,4 @@
-package com.example.qreader;
+package com.daisa.qreader;
 
 import android.content.Intent;
 import android.os.Bundle;

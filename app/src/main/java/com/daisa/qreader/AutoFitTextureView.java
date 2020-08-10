@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.qreader;
+package com.daisa.qreader;
 
 import android.content.Context;
 import android.util.AttributeSet;

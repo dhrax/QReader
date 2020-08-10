@@ -1,4 +1,4 @@
-package com.example.qreader;
+package com.daisa.qreader;
 
 import android.Manifest;
 import android.content.Intent;
@@ -45,6 +45,7 @@ import androidx.core.math.MathUtils;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
+
 import com.google.android.material.navigation.NavigationView;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.ChecksumException;
@@ -76,15 +77,15 @@ import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 import static android.widget.Toast.LENGTH_LONG;
 import static android.widget.Toast.LENGTH_SHORT;
-import static com.example.qreader.Constants.CAMERA_BACK;
-import static com.example.qreader.Constants.DEFAULT_ZOOM_BAR_PROGRESS;
-import static com.example.qreader.Constants.DEFAULT_ZOOM_FACTOR;
-import static com.example.qreader.Constants.DEFAULT_ZOOM_SMOOTHER_VALUE;
-import static com.example.qreader.Constants.MAX_PREVIEW_HEIGHT;
-import static com.example.qreader.Constants.MAX_PREVIEW_WIDTH;
-import static com.example.qreader.Constants.REQUEST_CAMERA_PERMISSION;
-import static com.example.qreader.Constants.REQUEST_READ_EXTERNAL_STORAGE_PERMISSION;
-import static com.example.qreader.Constants.RESULT_LOAD_IMG;
+import static com.daisa.qreader.Constants.CAMERA_BACK;
+import static com.daisa.qreader.Constants.DEFAULT_ZOOM_BAR_PROGRESS;
+import static com.daisa.qreader.Constants.DEFAULT_ZOOM_FACTOR;
+import static com.daisa.qreader.Constants.DEFAULT_ZOOM_SMOOTHER_VALUE;
+import static com.daisa.qreader.Constants.MAX_PREVIEW_HEIGHT;
+import static com.daisa.qreader.Constants.MAX_PREVIEW_WIDTH;
+import static com.daisa.qreader.Constants.REQUEST_CAMERA_PERMISSION;
+import static com.daisa.qreader.Constants.REQUEST_READ_EXTERNAL_STORAGE_PERMISSION;
+import static com.daisa.qreader.Constants.RESULT_LOAD_IMG;
 
 //TODO save last camera used
 //TODO preferences
