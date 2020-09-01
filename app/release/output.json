@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.example.qreader",
+  "applicationId": "com.daisa.qreader",
   "variantName": "release",
   "elements": [
     {

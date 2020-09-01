@@ -1,6 +1,5 @@
 package com.daisa.qreader;
 
-import android.util.Log;
 import android.util.Size;
 
 import java.util.ArrayList;
@@ -50,7 +49,6 @@ public class Util {
         } else if (notBigEnough.size() > 0) {
             return Collections.max(notBigEnough, new CompareSizesByArea());
         } else {
-            Log.e("DEBUG", "Couldn't find any suitable preview size");
             return choices[0];
         }
     }

@@ -26,6 +26,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.provider.ContactsContract;
 import android.util.Log;
 import android.util.Size;
 import android.view.MenuItem;
@@ -78,6 +79,7 @@ import static android.view.View.VISIBLE;
 import static android.widget.Toast.LENGTH_LONG;
 import static android.widget.Toast.LENGTH_SHORT;
 import static com.daisa.qreader.Constants.CAMERA_BACK;
+import static com.daisa.qreader.Constants.CAMERA_FRONT;
 import static com.daisa.qreader.Constants.DEFAULT_ZOOM_BAR_PROGRESS;
 import static com.daisa.qreader.Constants.DEFAULT_ZOOM_FACTOR;
 import static com.daisa.qreader.Constants.DEFAULT_ZOOM_SMOOTHER_VALUE;
@@ -91,11 +93,6 @@ import static com.daisa.qreader.Constants.RESULT_LOAD_IMG;
 //TODO preferences
 //fixme large images take too much time to process
 public class CameraPreviewActivity extends AppCompatActivity implements View.OnClickListener, NavigationView.OnNavigationItemSelectedListener {
-
-    /**
-     * Tag for the {@link Log}.
-     */
-    public static final String TAG = CameraPreviewActivity.class.getName();
 
     /**
      * ID of the current {@link CameraDevice}.
@@ -146,7 +143,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      * <br>
      * See: {@link CameraCharacteristics#LENS_FACING}
      */
-    private int mCameraLensFacingDirection;
+    //private int mCameraLensFacingDirection;
 
     /**
      * The {@link android.util.Size} of camera preview.
@@ -275,8 +272,6 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
                     } catch (NullPointerException | FormatException | ChecksumException | NotFoundException ex) {
                         ex.printStackTrace();
-                        if (ex.getMessage() != null)
-                            Log.e(TAG, ex.getMessage());
                     } finally {
                         mQrReader.reset();
                     }
@@ -355,6 +350,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
     };
 
+    Database db;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -375,7 +372,11 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
         mQrReader = new QRCodeReader();
 
+        db = new Database(this);
+
         createListeners();
+
+
     }
 
     @Override
@@ -529,11 +530,14 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      * Switch between our front camera and our back camera.
      */
     private void switchCameras() {
-        if (mCameraLensFacingDirection == CameraCharacteristics.LENS_FACING_BACK) {
-            mCameraLensFacingDirection = CameraCharacteristics.LENS_FACING_FRONT;
-        } else if (mCameraLensFacingDirection == CameraCharacteristics.LENS_FACING_FRONT) {
-            mCameraLensFacingDirection = CameraCharacteristics.LENS_FACING_BACK;
+        Log.d("DEBUG", "Before last camera used update::" + db.selectLastCameraUsed());
+        if (mCameraId.equals(CAMERA_BACK)) {
+            db.updateData(CAMERA_FRONT);
+        } else {
+            db.updateData(CAMERA_BACK);
         }
+
+        Log.d("DEBUG", "After last camera used update::" + db.selectLastCameraUsed());
 
         closeCamera();
         reopenCamera();
@@ -647,6 +651,13 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             requestPermission(Manifest.permission.CAMERA, REQUEST_CAMERA_PERMISSION);
             return;
         }
+        String lastCamera = db.selectLastCameraUsed();
+        Log.d("DEBUG", "LastCameraUsed::" + lastCamera);
+        if (lastCamera == null) {
+            mCameraId = CAMERA_BACK;
+        } else {
+            mCameraId = lastCamera;
+        }
         setUpCameraOutputs(width, height);
         configureTransform(width, height);
         CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
@@ -654,11 +665,11 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
+
             assert manager != null;
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
             //We subtract 1 to the maxZoom value because we start from 0
             zoomBar.setMax(((int) maxZoom - 1) * DEFAULT_ZOOM_SMOOTHER_VALUE);
-            Log.d("DEBUG", String.valueOf(zoomBar.getMax()));
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -701,28 +712,28 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
         try {
             assert manager != null;
-            for (String cameraId : manager.getCameraIdList()) {
-                CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+            CameraCharacteristics characteristics = manager.getCameraCharacteristics(mCameraId);
 
-                Integer facing = characteristics.get(LENS_FACING);
-                //LENS_FACING_BACK == Front camera -- LENS_FACING_FRONT == Back camera
-                if (facing != null && facing != mCameraLensFacingDirection)
-                    continue;
+            /*Integer facing = characteristics.get(LENS_FACING);
+            //LENS_FACING_BACK == Front camera -- LENS_FACING_FRONT == Back camera
+            if (facing != null)
+                mCameraLensFacingDirection = facing;
 
-                StreamConfigurationMap map = characteristics.get(SCALER_STREAM_CONFIGURATION_MAP);
-                if (map == null)
-                    continue;
+             */
 
-                zoomSettings(characteristics);
+            StreamConfigurationMap map = characteristics.get(SCALER_STREAM_CONFIGURATION_MAP);
 
-                flashSettings(characteristics, cameraId);
+            zoomSettings(characteristics);
+            flashSettings(characteristics);
 
-                int mImageformat = YUV_420_888;
+            int mImageformat = YUV_420_888;
 
-                // For still image captures, we use the largest available size.
+            // For still image captures, we use the largest available size.
+            if (map != null) {
                 Size largest = Collections.max(Arrays.asList(map.getOutputSizes(mImageformat)), new Util.CompareSizesByArea());
                 mImageReader = ImageReader.newInstance(largest.getWidth() / 16, largest.getHeight() / 16, mImageformat, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
+
 
                 Point displaySize = new Point();
                 getWindowManager().getDefaultDisplay().getSize(displaySize);
@@ -747,10 +758,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 } else {
                     mTextureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 }
-
-                mCameraId = cameraId;
-                return;
             }
+
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (NullPointerException e) {
@@ -812,18 +821,16 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      * Father method of all flash's methods related.
      *
      * @param characteristics {@link CameraCharacteristics} of our {@link CameraDevice}
-     * @param cameraId        id of our {@link CameraDevice}
-     *                        <br><br>
      *                        See also:
      *                        <br>
      *                        {@link #isFlashSupported(CameraCharacteristics)}
      *                        <br>
-     *                        {@link #setupFlashButton(String)}
+     *                        {@link #setupFlashButton()}
      */
-    private void flashSettings(CameraCharacteristics characteristics, String cameraId) {
+    private void flashSettings(CameraCharacteristics characteristics) {
         isFlashSupported(characteristics);
 
-        setupFlashButton(cameraId);
+        setupFlashButton();
     }
 
     /**
@@ -852,8 +859,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     /**
      * Set the visibility of our flash {@link ImageButton} depending of whether flash is supported or not by the actual {@link CameraDevice}.
      */
-    public void setupFlashButton(String cameraId) {
-        if (cameraId.equals(CAMERA_BACK) && mFlashSupported) {
+    public void setupFlashButton() {
+        if (mCameraId.equals(CAMERA_BACK) && mFlashSupported) {
             toggleFlash.setVisibility(VISIBLE);
             spacerTop.setVisibility(VISIBLE);
 
@@ -883,7 +890,6 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
         photoPickerIntent.setType("image/*");
         startActivityForResult(photoPickerIntent, RESULT_LOAD_IMG);
-        Log.d(TAG, "Abriendo galería");
     }
 
     /**

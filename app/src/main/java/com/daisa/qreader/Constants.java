@@ -60,4 +60,10 @@ public class Constants {
      * Id of our back camera.
      */
     public static final String CAMERA_BACK = "0";
+
+
+    public static final String DB_NAME = "QReaderDB.db";
+    public static final String CAMERA_TABLE = "camera";
+    public static final String LAST_CAMERA_USED = "last_camera";
+
 }
