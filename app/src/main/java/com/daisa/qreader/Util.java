@@ -2,9 +2,11 @@ package com.daisa.qreader;
 
 import android.util.Size;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
 public class Util {
@@ -63,6 +65,11 @@ public class Util {
             // We cast here to ensure the multiplications won't overflow
             return Long.signum((long) lhs.getWidth() * lhs.getHeight() - (long) rhs.getWidth() * rhs.getHeight());
         }
+    }
+
+    public static String getActualDate(){
+        SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy");
+        return sdf.format(new Date());
     }
 
 

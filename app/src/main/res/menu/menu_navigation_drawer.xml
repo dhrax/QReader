@@ -13,6 +13,16 @@
             android:title="@string/gallery" />
 
         <item
+            android:id="@+id/nav_history"
+            android:icon="@android:drawable/ic_menu_recent_history"
+            android:title="@string/history" />
+
+        <item
+            android:id="@+id/nav_favorites"
+            android:icon="@android:drawable/star_on"
+            android:title="@string/favorites" />
+
+        <item
             android:id="@+id/nav_share"
             android:icon="@android:drawable/ic_menu_share"
             android:title="@string/share" />

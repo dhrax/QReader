@@ -2,6 +2,7 @@ package com.daisa.qreader;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -13,10 +14,13 @@ import androidx.fragment.app.Fragment;
 //TODO improve interface
 public class ResultActivity extends AppCompatActivity {
 
+    Database db;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_result);
+
+        db = new Database(this);
 
         initInterfaceElements();
     }
@@ -45,6 +49,8 @@ public class ResultActivity extends AppCompatActivity {
         String linkReceived = intent.getStringExtra("link");
 
         linkResult.setText(String.format("%s%s", linkResult.getText().toString(), linkReceived));
+
+        db.insertLinkToHistory(linkReceived);
 
         Fragment fg = WebViewFragment.newInstance(linkReceived);
         getSupportFragmentManager().beginTransaction().add(R.id.relativeLayout, fg).commit();

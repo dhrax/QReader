@@ -26,7 +26,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.provider.ContactsContract;
 import android.util.Log;
 import android.util.Size;
 import android.view.MenuItem;
@@ -67,7 +66,6 @@ import java.util.concurrent.TimeUnit;
 
 import static android.graphics.ImageFormat.YUV_420_888;
 import static android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE;
-import static android.hardware.camera2.CameraCharacteristics.LENS_FACING;
 import static android.hardware.camera2.CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM;
 import static android.hardware.camera2.CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP;
 import static android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE;
@@ -429,13 +427,19 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                     openGallery();
                 }
                 break;
+            case R.id.nav_history:
+                Intent historyIntent = new Intent(this, HistoryActivity.class);
+                startActivity(historyIntent);
+                break;
+            case R.id.nav_favorites:
+                break;
             case R.id.nav_share:
                 try {
                     Intent shareIntent = new Intent(Intent.ACTION_SEND);
                     shareIntent.setType("text/plain");
                     shareIntent.putExtra(Intent.EXTRA_SUBJECT, "QReader");
                     String shareMessage = "This app is great, you should check it out!!\n\n";
-                    shareMessage = shareMessage + "https://play.google.com/store/apps/details?id=" + BuildConfig.APPLICATION_ID + "\n\n";
+                    shareMessage = shareMessage + "https://play.google.com/store/apps/details?id=" + BuildConfig.APPLICATION_ID;
                     shareIntent.putExtra(Intent.EXTRA_TEXT, shareMessage);
                     startActivity(Intent.createChooser(shareIntent, "Choose one"));
                 } catch (Exception ignored) {
@@ -532,9 +536,9 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     private void switchCameras() {
         Log.d("DEBUG", "Before last camera used update::" + db.selectLastCameraUsed());
         if (mCameraId.equals(CAMERA_BACK)) {
-            db.updateData(CAMERA_FRONT);
+            db.updateLastCameraUsed(CAMERA_FRONT);
         } else {
-            db.updateData(CAMERA_BACK);
+            db.updateLastCameraUsed(CAMERA_BACK);
         }
 
         Log.d("DEBUG", "After last camera used update::" + db.selectLastCameraUsed());

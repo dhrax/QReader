@@ -63,7 +63,11 @@ public class Constants {
 
 
     public static final String DB_NAME = "QReaderDB.db";
+    //Constants to store last camera used.
     public static final String CAMERA_TABLE = "camera";
     public static final String LAST_CAMERA_USED = "last_camera";
-
+    //Constants to store all links scanned.
+    public static final String HISTORY_TABLE = "history";
+    public static final String LINK_TEXT = "link_text";
+    public static final String SCAN_DATE = "scan_date";
 }
