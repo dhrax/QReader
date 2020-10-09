@@ -1,8 +1,6 @@
 <resources>
     <string name="app_name">QReader</string>
     <string name="loading">Loading...</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="gallery">Gallery</string>
     <string name="favorites">Favorites</string>
     <string name="history">History</string>
@@ -10,4 +8,6 @@
     <string name="share">Share</string>
     <string name="send_code">Send code</string>
     <string name="contact">Contact us</string>
+    <string name="preferences">Preferences</string>
+    <string name="title_activity_preferences">PreferencesActivity</string>
 </resources>

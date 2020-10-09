@@ -1,5 +1,6 @@
 package com.daisa.qreader;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,6 +14,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.preference.PreferenceManager;
 
 public class WebViewFragment extends Fragment {
 
@@ -20,6 +22,7 @@ public class WebViewFragment extends Fragment {
     ProgressBar progressBar;
     TextView loadingTextView;
     private String linkReceived;
+    SharedPreferences prefs;
 
     public WebViewFragment(String linkReceived) {
         this.linkReceived = linkReceived;
@@ -39,6 +42,7 @@ public class WebViewFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        prefs = PreferenceManager.getDefaultSharedPreferences(view.getContext());
         linkWebView = view.findViewById(R.id.linkWebView);
         progressBar = view.findViewById(R.id.progressBar);
         loadingTextView = view.findViewById(R.id.loadingTextView);
@@ -70,6 +74,6 @@ public class WebViewFragment extends Fragment {
         linkWebView.loadUrl(linkReceived);
 
         WebSettings webSettings = linkWebView.getSettings();
-        webSettings.setJavaScriptEnabled(false);
+        webSettings.setJavaScriptEnabled(prefs.getBoolean("enable_js", false));
     }
 }

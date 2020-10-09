@@ -5,7 +5,7 @@ import android.os.Bundle;
 
 import java.util.ArrayList;
 
-public class HistoryActivity extends ListActivity{
+public class FavoriteActivity extends ListActivity {
 
     private HistoryAdapter adapter;
     private ArrayList<HistoryElement> elements = new ArrayList<>();
@@ -13,9 +13,9 @@ public class HistoryActivity extends ListActivity{
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_history);
+        setContentView(R.layout.activity_favorite);
 
-        adapter = new HistoryAdapter(HistoryActivity.this,  elements);
+        adapter = new HistoryAdapter(FavoriteActivity.this,  elements);
         setListAdapter(adapter);
     }
 
@@ -25,7 +25,8 @@ public class HistoryActivity extends ListActivity{
 
         Database db = new Database(this);
         elements.clear();
-        elements.addAll(db.getLinks("all"));
+        elements.addAll(db.getLinks("favorites"));
         adapter.notifyDataSetChanged();
     }
+
 }

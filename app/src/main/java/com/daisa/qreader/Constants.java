@@ -61,13 +61,43 @@ public class Constants {
      */
     public static final String CAMERA_BACK = "0";
 
-
+    /*
+    Database related constants.
+     */
+    /**
+     * Database's name.
+     */
     public static final String DB_NAME = "QReaderDB.db";
+
     //Constants to store last camera used.
+    /**
+     * Table used to store camera relates data.
+     */
     public static final String CAMERA_TABLE = "camera";
+
+    /**
+     * Column used to store the last camera used even if the app is closed.
+     */
     public static final String LAST_CAMERA_USED = "last_camera";
+
     //Constants to store all links scanned.
+    /**
+     * Table used to store visited links related data.
+     */
     public static final String HISTORY_TABLE = "history";
+
+    /**
+     * Column used to store the link scanned.
+     */
     public static final String LINK_TEXT = "link_text";
+
+    /**
+     * Column used to store the last time the link was scanned.
+     */
     public static final String SCAN_DATE = "scan_date";
+
+    /**
+     * Column used to store whether the link is favorite or not.
+     */
+    public static final String FAVORITE = "favorite";
 }

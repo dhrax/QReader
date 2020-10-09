@@ -14,8 +14,12 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme.NoActionBar"
         android:usesCleartextTraffic="true">
-        <activity android:name=".HistoryActivity"></activity>
-        <activity android:name=".ResultActivity"></activity>
+        <activity
+            android:name=".PreferencesActivity"
+            android:label="@string/title_activity_preferences"></activity>
+        <activity android:name=".FavoriteActivity" />
+        <activity android:name=".HistoryActivity" />
+        <activity android:name=".ResultActivity" />
         <activity android:name=".CameraPreviewActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

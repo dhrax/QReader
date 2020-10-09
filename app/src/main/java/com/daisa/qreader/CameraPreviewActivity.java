@@ -45,7 +45,6 @@ import androidx.core.math.MathUtils;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
-
 import com.google.android.material.navigation.NavigationView;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.ChecksumException;
@@ -87,8 +86,6 @@ import static com.daisa.qreader.Constants.REQUEST_CAMERA_PERMISSION;
 import static com.daisa.qreader.Constants.REQUEST_READ_EXTERNAL_STORAGE_PERMISSION;
 import static com.daisa.qreader.Constants.RESULT_LOAD_IMG;
 
-//TODO save last camera used
-//TODO preferences
 //fixme large images take too much time to process
 public class CameraPreviewActivity extends AppCompatActivity implements View.OnClickListener, NavigationView.OnNavigationItemSelectedListener {
 
@@ -242,9 +239,14 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     private Semaphore mCameraOpenCloseLock = new Semaphore(1);
 
     /**
-     * Object that will decode the image of a QR code
+     * Instance of {@link QRCodeReader} used to decode the image of a QR code
      */
     private QRCodeReader mQrReader;
+
+    /**
+     * Instance of {@link Database} used to access the phone internal database.
+     */
+    private Database db;
 
     /**
      * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
@@ -348,13 +350,17 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
     };
 
-    Database db;
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera_preview);
 
+        initializeElements();
+        createListeners();
+    }
+
+    private void initializeElements() {
+        //Layout elements
         mTextureView = findViewById(R.id.texture);
         zoomOut = findViewById(R.id.zoomOut);
         zoomBar = findViewById(R.id.zoomBar);
@@ -366,15 +372,12 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         drawerLayout = findViewById(R.id.drawerLayout);
         navigationView = findViewById(R.id.navigationView);
 
+        //other elements
         mIsFlashOn = false;
 
         mQrReader = new QRCodeReader();
 
         db = new Database(this);
-
-        createListeners();
-
-
     }
 
     @Override
@@ -432,6 +435,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 startActivity(historyIntent);
                 break;
             case R.id.nav_favorites:
+                Intent favoriteIntent = new Intent(this, FavoriteActivity.class);
+                startActivity(favoriteIntent);
                 break;
             case R.id.nav_share:
                 try {
@@ -449,11 +454,15 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             case R.id.nav_email:
                 Intent intent = new Intent(Intent.ACTION_SENDTO);
                 intent.setData(Uri.parse("mailto:")); // only email apps should handle this
-                intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"some@email.address"});
+                intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"companydaisa@gmail.com"});
                 intent.putExtra(Intent.EXTRA_SUBJECT, "I would like to talk about...");
                 if (intent.resolveActivity(getPackageManager()) != null) {
                     startActivity(intent);
                 }
+                break;
+            case R.id.nav_preferences:
+                Intent preferencesIntent = new Intent(this, PreferencesActivity.class);
+                startActivity(preferencesIntent);
                 break;
             default:
                 break;
@@ -486,7 +495,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 Toast.makeText(this, "Barcode checksum failed.", LENGTH_LONG).show();
                 e.printStackTrace();
             } catch (NotFoundException e) {
-                Toast.makeText(this, "A QR code has not been found.", LENGTH_LONG).show();
+                Toast.makeText(this, "QR or barcode not found.", LENGTH_LONG).show();
                 e.printStackTrace();
             } finally {
                 mQrReader.reset();
@@ -580,7 +589,6 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     public void onResume() {
         super.onResume();
         startBackgroundThread();
-
         reopenCamera();
     }
 
@@ -655,8 +663,9 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             requestPermission(Manifest.permission.CAMERA, REQUEST_CAMERA_PERMISSION);
             return;
         }
+        //We get the last camera value stored in our database to keep it stored even if the app is closed.
         String lastCamera = db.selectLastCameraUsed();
-        Log.d("DEBUG", "LastCameraUsed::" + lastCamera);
+        Log.d("DEBUG openCamera", "LastCameraUsed:" + lastCamera);
         if (lastCamera == null) {
             mCameraId = CAMERA_BACK;
         } else {
