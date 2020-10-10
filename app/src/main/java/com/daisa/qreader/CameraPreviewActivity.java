@@ -2,6 +2,7 @@ package com.daisa.qreader;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -33,6 +34,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.Space;
 import android.widget.Toast;
@@ -44,6 +46,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.math.MathUtils;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.preference.PreferenceManager;
 
 import com.google.android.material.navigation.NavigationView;
 import com.google.zxing.BinaryBitmap;
@@ -99,24 +102,24 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      */
     private AutoFitTextureView mTextureView;
 
-    private ImageButton zoomOut;
+    private ImageView zoomOut;
 
     /**
      * A {@link SeekBar} to manage the zoom level.
      */
     private SeekBar zoomBar;
 
-    private ImageButton zoomIn;
+    private ImageView zoomIn;
 
     /**
      * An {@link ImageButton} to switch between our front and our back cameras.
      */
-    private ImageButton switchCamera;
+    private ImageView switchCamera;
 
     /**
      * An {@link ImageButton} to toggle the flash in our camera.
      */
-    private ImageButton toggleFlash;
+    private ImageView toggleFlash;
 
     /**
      * A {@link Space} used to separate {@link CameraPreviewActivity#switchCamera} and {@link CameraPreviewActivity#toggleFlash}.
@@ -249,6 +252,11 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     private Database db;
 
     /**
+     * Instance of {@link SharedPreferences} used to manage the app's behaviour by the user.
+     */
+    SharedPreferences prefs;
+
+    /**
      * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
      * still image is ready to be saved / processed.
      */
@@ -378,6 +386,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         mQrReader = new QRCodeReader();
 
         db = new Database(this);
+
+        prefs = PreferenceManager.getDefaultSharedPreferences(this);
     }
 
     @Override
@@ -455,7 +465,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 Intent intent = new Intent(Intent.ACTION_SENDTO);
                 intent.setData(Uri.parse("mailto:")); // only email apps should handle this
                 intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"companydaisa@gmail.com"});
-                intent.putExtra(Intent.EXTRA_SUBJECT, "I would like to talk about...");
+                intent.putExtra(Intent.EXTRA_SUBJECT, "I love your app!!");
                 if (intent.resolveActivity(getPackageManager()) != null) {
                     startActivity(intent);
                 }
@@ -543,14 +553,16 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      * Switch between our front camera and our back camera.
      */
     private void switchCameras() {
-        Log.d("DEBUG", "Before last camera used update::" + db.selectLastCameraUsed());
-        if (mCameraId.equals(CAMERA_BACK)) {
-            db.updateLastCameraUsed(CAMERA_FRONT);
-        } else {
-            db.updateLastCameraUsed(CAMERA_BACK);
+        if(prefs.getBoolean("save_last_camera", true)){
+            Log.d("DEBUG switchCameras", "Before last camera used update::" + db.selectLastCameraUsed());
+            if (mCameraId.equals(CAMERA_BACK)) {
+                db.updateLastCameraUsed(CAMERA_FRONT);
+            } else {
+                db.updateLastCameraUsed(CAMERA_BACK);
+            }
         }
 
-        Log.d("DEBUG", "After last camera used update::" + db.selectLastCameraUsed());
+        Log.d("DEBUG switchCameras", "After last camera used update::" + db.selectLastCameraUsed());
 
         closeCamera();
         reopenCamera();
@@ -663,13 +675,15 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             requestPermission(Manifest.permission.CAMERA, REQUEST_CAMERA_PERMISSION);
             return;
         }
-        //We get the last camera value stored in our database to keep it stored even if the app is closed.
-        String lastCamera = db.selectLastCameraUsed();
-        Log.d("DEBUG openCamera", "LastCameraUsed:" + lastCamera);
-        if (lastCamera == null) {
-            mCameraId = CAMERA_BACK;
-        } else {
-            mCameraId = lastCamera;
+        if(prefs.getBoolean("save_last_camera", true)){
+            //We get the last camera value stored in our database to keep it stored even if the app is closed.
+            String lastCamera = db.selectLastCameraUsed();
+            Log.d("DEBUG openCamera", "LastCameraUsed:" + lastCamera);
+            if (lastCamera == null) {
+                mCameraId = CAMERA_BACK;
+            } else {
+                mCameraId = lastCamera;
+            }
         }
         setUpCameraOutputs(width, height);
         configureTransform(width, height);

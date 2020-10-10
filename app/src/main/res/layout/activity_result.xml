@@ -26,7 +26,7 @@
                 android:layout_weight="1"
                 android:autoLink="all"
                 android:background="#00000000"
-                android:text="Link decoded: "
+                android:text="@string/decoded_link_text"
                 android:textColorLink="#00BCD4" />
 
             <ImageView

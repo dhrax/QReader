@@ -4,10 +4,31 @@
 
         <SwitchPreferenceCompat
             app:key="enable_js"
-            app:title="Load JavaScript in browser"
-            app:summaryOn="JavaScript items will be loaded when opening a link"
-            app:summaryOff="JavaScript items will not be loaded (eg: ads, menus...) when opening a link"
+            app:title="@string/enable_js_title"
+            app:summaryOn="@string/enable_js_on_desc"
+            app:summaryOff="@string/enable_js_off_desc"
             app:defaultValue="false"
+            app:useSimpleSummaryProvider="true" />
+
+        <!--<ListPreference
+            app:defaultValue="reply"
+            app:entries="@array/reply_entries"
+            app:entryValues="@array/reply_values"
+            app:key="reply"
+            app:title="@string/reply_title"
+            app:useSimpleSummaryProvider="true" />
+        -->
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Camera Configuration">
+
+        <SwitchPreferenceCompat
+            app:key="save_last_camera"
+            app:title="@string/save_camera_title"
+            app:summaryOn="@string/save_camera_on_desc"
+            app:summaryOff="@string/save_camera_off_desc"
+            app:defaultValue="true"
             app:useSimpleSummaryProvider="true" />
 
         <!--<ListPreference

@@ -37,25 +37,27 @@
                 android:gravity="center"
                 android:orientation="horizontal">
 
-                <ImageButton
+                <ImageView
                     android:id="@+id/switchCamera"
                     android:layout_width="50dp"
                     android:layout_height="50dp"
                     android:background="#00FFFFFF"
                     android:scaleType="fitXY"
-                    app:srcCompat="@drawable/switch_camera" />
+                    app:srcCompat="@drawable/switch_camera"
+                    android:contentDescription="@string/switch_camera_desc" />
 
                 <Space
                     android:id="@+id/spacerTop"
                     android:layout_width="50dp"
                     android:layout_height="wrap_content" />
 
-                <ImageButton
+                <ImageView
                     android:id="@+id/toggleFlash"
                     android:layout_width="50dp"
                     android:layout_height="50dp"
                     android:background="#00FFFFFF"
-                    app:srcCompat="@drawable/flash_off" />
+                    app:srcCompat="@drawable/flash_off"
+                    android:contentDescription="@string/toggle_flash_desc" />
             </LinearLayout>
 
 
@@ -67,14 +69,15 @@
                 android:weightSum="6"
                 android:orientation="horizontal">
 
-                <ImageButton
+                <ImageView
                     android:id="@+id/zoomOut"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="#00FFFFFF"
                     android:scaleType="fitXY"
-                    app:srcCompat="@drawable/minus" />
+                    app:srcCompat="@drawable/minus"
+                    android:contentDescription="@string/zoom_in_desc" />
 
                 <SeekBar
                     android:id="@+id/zoomBar"
@@ -84,14 +87,15 @@
                     android:progressTint="#FFFFFF"
                     android:thumbTint="#FFFFFF" />
 
-                <ImageButton
+                <ImageView
                     android:id="@+id/zoomIn"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:scaleType="fitXY"
                     android:background="#00FFFFFF"
-                    app:srcCompat="@drawable/plus" />
+                    app:srcCompat="@drawable/plus"
+                    android:contentDescription="@string/zoom_out_desc"/>
             </LinearLayout>
 
         </RelativeLayout>
