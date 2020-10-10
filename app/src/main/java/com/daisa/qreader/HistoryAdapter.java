@@ -1,6 +1,7 @@
 package com.daisa.qreader;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -46,7 +47,7 @@ public class HistoryAdapter extends BaseAdapter {
         viewholder.text = detail(convertView, R.id.tvLinkText, elements.get(position).getText());
         viewholder.date = detail(convertView, R.id.tvScanDate, elements.get(position).getDate());
 
-        ((ImageView) convertView.findViewById(R.id.btnIsFavorite)).setImageResource(elements.get(position).isFavorite() ? R.drawable.is_favorite : R.drawable.not_favorite);
+        ((ImageView) convertView.findViewById(R.id.btnIsFavorite)).setImageResource(elements.get(position).isFavorite() ? R.drawable.favorite_on : R.drawable.favorite_off);
 
         final View finalConvertView = convertView;
         //if we click on the ImageView, we change the link's favorite status.
@@ -55,13 +56,12 @@ public class HistoryAdapter extends BaseAdapter {
             public void onClick(View view) {
                 elements.get(position).setFavorite(!elements.get(position).isFavorite());
 
-                if (db.updateFavoriteStatus(elements.get(position).getID(), elements.get(position).isFavorite())) {
-                    Toast.makeText(context, "Updated", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(context, "Error while updating", Toast.LENGTH_SHORT).show();
+                if (!db.updateFavoriteStatus(elements.get(position).getID(), elements.get(position).isFavorite())) {
+                    Log.d("DEBUG getView", elements.get(position).getID() + " not updated.");
+                    Toast.makeText(context, R.string.error_making_favorite, Toast.LENGTH_SHORT).show();
                 }
 
-                ((ImageView) finalConvertView.findViewById(R.id.btnIsFavorite)).setImageResource(db.getFavoriteStatus(elements.get(position).getText()) ? R.drawable.is_favorite : R.drawable.not_favorite);
+                ((ImageView) finalConvertView.findViewById(R.id.btnIsFavorite)).setImageResource(db.getFavoriteStatus(elements.get(position).getText()) ? R.drawable.favorite_on : R.drawable.favorite_off);
 
                 notifyDataSetChanged();
             }

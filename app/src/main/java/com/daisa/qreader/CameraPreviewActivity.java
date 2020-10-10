@@ -117,7 +117,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     private ImageView switchCamera;
 
     /**
-     * An {@link ImageButton} to toggle the flash in our camera.
+     * An {@link ImageButton} to toggle the flash_on in our camera.
      */
     private ImageView toggleFlash;
 
@@ -164,7 +164,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     private boolean mFlashSupported;
 
     /**
-     * Whether the flash is turned on or off.
+     * Whether the flash_on is turned on or off.
      */
     private boolean mIsFlashOn;
 
@@ -453,10 +453,10 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                     Intent shareIntent = new Intent(Intent.ACTION_SEND);
                     shareIntent.setType("text/plain");
                     shareIntent.putExtra(Intent.EXTRA_SUBJECT, "QReader");
-                    String shareMessage = "This app is great, you should check it out!!\n\n";
+                    String shareMessage = getString(R.string.share_message);
                     shareMessage = shareMessage + "https://play.google.com/store/apps/details?id=" + BuildConfig.APPLICATION_ID;
                     shareIntent.putExtra(Intent.EXTRA_TEXT, shareMessage);
-                    startActivity(Intent.createChooser(shareIntent, "Choose one"));
+                    startActivity(Intent.createChooser(shareIntent, getString(R.string.choose_one)));
                 } catch (Exception ignored) {
 
                 }
@@ -464,8 +464,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             case R.id.nav_email:
                 Intent intent = new Intent(Intent.ACTION_SENDTO);
                 intent.setData(Uri.parse("mailto:")); // only email apps should handle this
-                intent.putExtra(Intent.EXTRA_EMAIL, new String[]{"companydaisa@gmail.com"});
-                intent.putExtra(Intent.EXTRA_SUBJECT, "I love your app!!");
+                intent.putExtra(Intent.EXTRA_EMAIL, new String[]{getString(R.string.company_email)});
+                intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.email_subject));
                 if (intent.resolveActivity(getPackageManager()) != null) {
                     startActivity(intent);
                 }
@@ -477,7 +477,11 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             default:
                 break;
         }
-        return true;
+        if (drawerLayout.isDrawerOpen(GravityCompat.START))
+        {
+            drawerLayout.closeDrawer(GravityCompat.START, false);
+        }
+        return false;
     }
 
     @Override
@@ -499,20 +503,20 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                 decodeBitmap(source);
 
             } catch (FormatException e) {
-                Toast.makeText(this, "Barcode with errors detected.", LENGTH_LONG).show();
+                Toast.makeText(this, R.string.barcode_with_errors, LENGTH_LONG).show();
                 e.printStackTrace();
             } catch (ChecksumException e) {
-                Toast.makeText(this, "Barcode checksum failed.", LENGTH_LONG).show();
+                Toast.makeText(this, R.string.barcode_checksum_failed, LENGTH_LONG).show();
                 e.printStackTrace();
             } catch (NotFoundException e) {
-                Toast.makeText(this, "QR or barcode not found.", LENGTH_LONG).show();
+                Toast.makeText(this, R.string.barcode_not_found, LENGTH_LONG).show();
                 e.printStackTrace();
             } finally {
                 mQrReader.reset();
             }
 
         } else {
-            Toast.makeText(this, "You haven't picked an image.", LENGTH_LONG).show();
+            Toast.makeText(this, R.string.image_not_picked, LENGTH_LONG).show();
         }
     }
 
@@ -658,7 +662,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
                         @Override
                         public void onConfigureFailed(
                                 @NonNull CameraCaptureSession cameraCaptureSession) {
-                            showToast("Configure failed");
+                            showToast(getString(R.string.configue_failed));
                         }
                     }, null
             );
@@ -792,7 +796,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         } catch (NullPointerException e) {
             // Currently an NPE is thrown when the Camera2API is used but not supported on the
             // device this code runs.
-            Toast.makeText(CameraPreviewActivity.this, "Camera2 API not supported on this device", LENGTH_LONG).show();
+            Toast.makeText(CameraPreviewActivity.this, R.string.camera2_nor_supported, LENGTH_LONG).show();
         }
     }
 
@@ -845,7 +849,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     }
 
     /**
-     * Father method of all flash's methods related.
+     * Father method of all flash_on's methods related.
      *
      * @param characteristics {@link CameraCharacteristics} of our {@link CameraDevice}
      *                        See also:
@@ -861,7 +865,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     }
 
     /**
-     * Whether we have to turn the flash on or not
+     * Whether we have to turn the flash_on on or not
      */
     private void setFlash() {
         if (mIsFlashOn) {
@@ -871,7 +875,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
-            toggleFlash.setImageResource(R.drawable.flash);
+            toggleFlash.setImageResource(R.drawable.flash_on);
         } else {
             mPreviewRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF);
             try {
@@ -884,7 +888,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     }
 
     /**
-     * Set the visibility of our flash {@link ImageButton} depending of whether flash is supported or not by the actual {@link CameraDevice}.
+     * Set the visibility of our flash_on {@link ImageButton} depending of whether flash_on is supported or not by the actual {@link CameraDevice}.
      */
     public void setupFlashButton() {
         if (mCameraId.equals(CAMERA_BACK) && mFlashSupported) {
@@ -892,7 +896,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             spacerTop.setVisibility(VISIBLE);
 
             if (mIsFlashOn) {
-                toggleFlash.setImageResource(R.drawable.flash);
+                toggleFlash.setImageResource(R.drawable.flash_on);
             } else {
                 toggleFlash.setImageResource(R.drawable.flash_off);
             }
@@ -904,7 +908,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     }
 
     /**
-     * Whether flash is supported or not.
+     * Whether flash_on is supported or not.
      *
      * @param characteristics {@link CameraCharacteristics} of our {@link CameraDevice}
      */
@@ -935,13 +939,13 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         switch (requestCode) {
             case REQUEST_CAMERA_PERMISSION:
                 if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(CameraPreviewActivity.this, "ERROR: Camera permissions not granted", LENGTH_LONG).show();
+                    Toast.makeText(CameraPreviewActivity.this, R.string.camera_permissions_not_granted, LENGTH_LONG).show();
                     finish();
                 }
                 break;
             case REQUEST_READ_EXTERNAL_STORAGE_PERMISSION:
                 if (grantResults.length != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(CameraPreviewActivity.this, "ERROR: External storage permissions not granted", LENGTH_LONG).show();
+                    Toast.makeText(CameraPreviewActivity.this, R.string.store_permissions_not_granted, LENGTH_LONG).show();
                 } else {
                     openGallery();
                 }

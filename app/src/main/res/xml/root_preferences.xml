@@ -3,11 +3,11 @@
     <PreferenceCategory app:title="Browser Configuration">
 
         <SwitchPreferenceCompat
-            app:key="enable_js"
-            app:title="@string/enable_js_title"
-            app:summaryOn="@string/enable_js_on_desc"
-            app:summaryOff="@string/enable_js_off_desc"
             app:defaultValue="false"
+            app:key="enable_js"
+            app:summaryOff="@string/enable_js_off_desc"
+            app:summaryOn="@string/enable_js_on_desc"
+            app:title="@string/enable_js_title"
             app:useSimpleSummaryProvider="true" />
 
         <!--<ListPreference

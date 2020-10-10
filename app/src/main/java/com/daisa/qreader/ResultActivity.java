@@ -61,7 +61,7 @@ public class ResultActivity extends AppCompatActivity implements View.OnClickLis
         Fragment fg = WebViewFragment.newInstance(linkReceived);
         getSupportFragmentManager().beginTransaction().add(R.id.relativeLayout, fg).commit();
 
-        btnResFav.setImageResource(db.getFavoriteStatus(linkReceived) ? R.drawable.is_favorite : R.drawable.not_favorite);
+        btnResFav.setImageResource(db.getFavoriteStatus(linkReceived) ? R.drawable.favorite_on : R.drawable.favorite_off);
         btnResFav.setOnClickListener(this);
     }
 
@@ -71,14 +71,14 @@ public class ResultActivity extends AppCompatActivity implements View.OnClickLis
             case R.id.btnResFav:
                 if(db.updateFavoriteStatus(linkReceived, !db.getFavoriteStatus(linkReceived))){
                     if(db.getFavoriteStatus(linkReceived)){
-                        btnResFav.setImageResource(R.drawable.is_favorite);
-                        Toast.makeText(this, "Link added to favorites.", Toast.LENGTH_SHORT).show();
+                        btnResFav.setImageResource(R.drawable.favorite_on);
+                        Toast.makeText(this, R.string.link_added_to_favorites, Toast.LENGTH_SHORT).show();
                     }else{
-                        btnResFav.setImageResource(R.drawable.not_favorite);
-                        Toast.makeText(this, "Link deleted from favorites.", Toast.LENGTH_SHORT).show();
+                        btnResFav.setImageResource(R.drawable.favorite_off);
+                        Toast.makeText(this, R.string.link_deleted_from_favorites, Toast.LENGTH_SHORT).show();
                     }
                 }else{
-                    Toast.makeText(this, "Couldn't add link to favorites.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.link_not_added_to_favorites, Toast.LENGTH_SHORT).show();
                 }
                 break;
             default:

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">QReader</string>
+    <string name="app_name" translatable="false">QReader</string>
     <string name="loading">Loading…</string>
     <string name="gallery">Gallery</string>
     <string name="favorites">Favorites</string>
@@ -9,20 +9,36 @@
     <string name="send_code">Send code</string>
     <string name="contact">Contact us</string>
     <string name="preferences">Preferences</string>
-    <string name="title_activity_preferences">PreferencesActivity</string>
-    <string name="switch_camera_desc">Element that changes between cameras</string>
-    <string name="toggle_flash_desc">Element that toggles the flash</string>
-    <string name="zoom_in_desc">Element that zooms in</string>
-    <string name="zoom_out_desc">Element that zooms out</string>
+    <string name="title_activity_preferences" translatable="false">PreferencesActivity</string>
+    <string name="switch_camera_desc">Button that changes between cameras</string>
+    <string name="toggle_flash_desc">Button that toggles the flash</string>
+    <string name="zoom_in_desc">Button that zooms in</string>
+    <string name="zoom_out_desc">Button that zooms out</string>
     <string name="decoded_link_text">Link decoded:</string>
-    <string name="btn_is_favorite_desc">Element that sets the link as favorite or not</string>
-    <string name="daisa_inc_desc">Daisa Inc. \ncompanydaisa@gmail.com</string>
-    <string name="app_logo">App logo</string>
+    <string name="btn_is_favorite_desc">Button that sets the link as favorite or not</string>
+    <string name="daisa_inc_desc" translatable="false">Daisa Inc. \ncompanydaisa@gmail.com</string>
+    <string name="app_logo" translatable="false">App logo</string>
     <string name="enable_js_on_desc">JavaScript items will be loaded when opening a link</string>
     <string name="enable_js_off_desc">JavaScript items will not be loaded (eg: ads, menus…) when opening a link</string>
-    <string name="enable_js_title">Load JavaScript in browser</string>
+    <string name="enable_js_title">Enable JavaScript in the in app browser</string>
     <string name="save_camera_title">Save camera state</string>
-    <string name="save_camera_on_desc">The last camera used will be saved.</string>
+    <string name="save_camera_on_desc">The last camera used will be saved</string>
     <string name="save_camera_off_desc">The last camera used will not be saved</string>
     <string name="app_logo_and_name">App logo and name</string>
+    <string name="share_message">This app is great, you should check it out!!\n\n</string>
+    <string name="choose_one">Choose one</string>
+    <string name="email_subject">I love your app!!</string>
+    <string name="company_email" translatable="false">companydaisa@gmail.com</string>
+    <string name="barcode_with_errors">QR or Barcode with errors detected</string>
+    <string name="barcode_checksum_failed">QR or Barcode checksum failed</string>
+    <string name="barcode_not_found">QR or barcode not found</string>
+    <string name="image_not_picked">You haven\'t picked an image</string>
+    <string name="configue_failed">Configure failed</string>
+    <string name="camera2_nor_supported">Camera2 API not supported on this device</string>
+    <string name="camera_permissions_not_granted">Camera permissions not granted</string>
+    <string name="store_permissions_not_granted">External storage permissions not granted</string>
+    <string name="error_making_favorite">Error while updating status</string>
+    <string name="link_added_to_favorites">Link added to favorites</string>
+    <string name="link_deleted_from_favorites">Link deleted from favorites</string>
+    <string name="link_not_added_to_favorites">Couldn\'t add link to favorites</string>
 </resources>

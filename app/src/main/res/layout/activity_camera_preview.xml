@@ -76,16 +76,16 @@
                     android:layout_weight="1"
                     android:background="#00FFFFFF"
                     android:scaleType="fitXY"
-                    app:srcCompat="@drawable/minus"
-                    android:contentDescription="@string/zoom_in_desc" />
+                    app:srcCompat="@drawable/zoom_out"
+                    android:contentDescription="@string/zoom_out_desc" />
 
                 <SeekBar
                     android:id="@+id/zoomBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="4"
-                    android:progressTint="#FFFFFF"
-                    android:thumbTint="#FFFFFF" />
+                    android:progressTint="@color/icon_color"
+                    android:thumbTint="@color/icon_color" />
 
                 <ImageView
                     android:id="@+id/zoomIn"
@@ -94,8 +94,8 @@
                     android:layout_weight="1"
                     android:scaleType="fitXY"
                     android:background="#00FFFFFF"
-                    app:srcCompat="@drawable/plus"
-                    android:contentDescription="@string/zoom_out_desc"/>
+                    app:srcCompat="@drawable/zoom_in"
+                    android:contentDescription="@string/zoom_in_desc"/>
             </LinearLayout>
 
         </RelativeLayout>
@@ -108,5 +108,7 @@
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
         app:headerLayout="@layout/nav_header"
+        app:itemTextAppearance="@style/TextAppearance.AppCompat.Medium"
+        app:itemTextColor="@color/icon_color"
         app:menu="@menu/menu_navigation_drawer" />
 </androidx.drawerlayout.widget.DrawerLayout>

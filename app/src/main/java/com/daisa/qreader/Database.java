@@ -218,7 +218,7 @@ public class Database extends SQLiteOpenHelper {
             boolean favorite = cursor.getInt(cursor.getColumnIndex(FAVORITE)) == 1;
             HistoryElement element = new HistoryElement(id, text, date, favorite);
             elements.add(element);
-            Log.d("DEBUG getFavoriteLinks", id + ", " + text + ", " + date + ", " + favorite);
+            Log.d("DEBUG getLinks", id + ", " + text + ", " + date + ", " + favorite);
         }
         cursor.close();
 
