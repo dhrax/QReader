@@ -30,6 +30,11 @@
             android:paddingRight="30dp"
             android:paddingBottom="20dp">
 
+            <Space
+                android:id="@+id/initSpacer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -62,12 +67,13 @@
 
 
             <LinearLayout
+                android:id="@+id/zoomLayout"
                 android:layout_width="match_parent"
                 android:layout_height="25dp"
                 android:layout_alignParentBottom="true"
                 android:gravity="center"
-                android:weightSum="6"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:weightSum="6">
 
                 <ImageView
                     android:id="@+id/zoomOut"
@@ -75,9 +81,9 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:background="#00FFFFFF"
+                    android:contentDescription="@string/zoom_out_desc"
                     android:scaleType="fitXY"
-                    app:srcCompat="@drawable/zoom_out"
-                    android:contentDescription="@string/zoom_out_desc" />
+                    app:srcCompat="@drawable/zoom_out" />
 
                 <SeekBar
                     android:id="@+id/zoomBar"
@@ -92,10 +98,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:scaleType="fitXY"
                     android:background="#00FFFFFF"
-                    app:srcCompat="@drawable/zoom_in"
-                    android:contentDescription="@string/zoom_in_desc"/>
+                    android:contentDescription="@string/zoom_in_desc"
+                    android:scaleType="fitXY"
+                    app:srcCompat="@drawable/zoom_in" />
             </LinearLayout>
 
         </RelativeLayout>

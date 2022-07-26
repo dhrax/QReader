@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:showIn="navigation_view">
 
@@ -8,32 +9,38 @@
         <item
             android:id="@+id/nav_gallery"
             android:icon="@drawable/gallery"
-            android:title="@string/gallery" />
+            android:title="@string/gallery"
+            app:actionViewClass="android.widget.Space" />
 
         <item
             android:id="@+id/nav_history"
             android:icon="@drawable/history"
-            android:title="@string/history" />
+            android:title="@string/history"
+            app:actionViewClass="android.widget.Space"/>
 
         <item
             android:id="@+id/nav_favorites"
             android:icon="@drawable/favorites"
-            android:title="@string/favorites" />
+            android:title="@string/favorites"
+            app:actionViewClass="android.widget.Space"/>
 
         <item
             android:id="@+id/nav_share"
             android:icon="@drawable/share"
-            android:title="@string/share" />
+            android:title="@string/share"
+            app:actionViewClass="android.widget.Space"/>
 
         <item
             android:id="@+id/nav_email"
             android:icon="@drawable/email"
-            android:title="@string/contact" />
+            android:title="@string/contact"
+            app:actionViewClass="android.widget.Space"/>
 
         <item
             android:id="@+id/nav_preferences"
             android:icon="@drawable/preferences"
-            android:title="@string/preferences" />
+            android:title="@string/preferences"
+            app:actionViewClass="android.widget.Space"/>
 
     </group>
 

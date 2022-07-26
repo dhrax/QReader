@@ -6,6 +6,10 @@ package com.daisa.qreader;
  */
 public class Constants {
 
+    public static final String APP_SHOWCASE_ID = "app_showcase";
+
+    public static final String DRAWER_SHOWCASE_ID = "drawer_showcase";
+
     /**
      * Max preview width guaranteed by Camera2 API.
      */

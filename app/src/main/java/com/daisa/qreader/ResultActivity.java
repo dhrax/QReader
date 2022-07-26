@@ -40,7 +40,6 @@ public class ResultActivity extends AppCompatActivity implements View.OnClickLis
             Intent intent = new Intent(this, CameraPreviewActivity.class);
             startActivity(intent);
         }
-
     }
 
     /**

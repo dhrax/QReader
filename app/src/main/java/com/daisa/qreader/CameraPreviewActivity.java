@@ -1,14 +1,21 @@
 package com.daisa.qreader;
 
 import android.Manifest;
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -17,9 +24,11 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
@@ -30,11 +39,15 @@ import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Size;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.Surface;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.Space;
 import android.widget.Toast;
@@ -66,6 +79,11 @@ import java.util.Collections;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import uk.co.deanwild.materialshowcaseview.MaterialShowcaseSequence;
+import uk.co.deanwild.materialshowcaseview.MaterialShowcaseView;
+import uk.co.deanwild.materialshowcaseview.ShowcaseConfig;
+import uk.co.deanwild.materialshowcaseview.ShowcaseTooltip;
+
 import static android.graphics.ImageFormat.YUV_420_888;
 import static android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE;
 import static android.hardware.camera2.CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM;
@@ -90,6 +108,9 @@ import static com.daisa.qreader.Constants.REQUEST_READ_EXTERNAL_STORAGE_PERMISSI
 import static com.daisa.qreader.Constants.RESULT_LOAD_IMG;
 
 //fixme large images take too much time to process
+//todo enfocar al tocar la pantalla
+//todo enfoque automático
+//todo borrar proyecto
 public class CameraPreviewActivity extends AppCompatActivity implements View.OnClickListener, NavigationView.OnNavigationItemSelectedListener {
 
     /**
@@ -297,8 +318,16 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      * @throws NotFoundException
      */
     private void decodeBitmap(LuminanceSource source) throws FormatException, ChecksumException, NotFoundException {
-        BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
-        onQRCodeRead(mQrReader.decode(bitmap).getText());
+        try{
+            BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+            onQRCodeRead(mQrReader.decode(bitmap).getText());
+        }catch (Exception e){
+            e.printStackTrace();
+            Log.e("DAISA ERROR", "Error en decodeBitmap");
+
+        }
+
+
     }
 
     /**
@@ -358,6 +387,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
     };
 
+    SurfaceView surfaceView;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -365,7 +396,11 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
 
         initializeElements();
         createListeners();
+
     }
+
+    private Util util;
+    AppShowcase showcase;
 
     private void initializeElements() {
         //Layout elements
@@ -388,6 +423,10 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
         db = new Database(this);
 
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+        util = new Util();
+
+        showcase = new AppShowcase(util, this);
     }
 
     @Override
@@ -421,6 +460,28 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             public void onStopTrackingTouch(SeekBar seekBar) {
             }
 
+        });
+
+        drawerLayout.addDrawerListener(new DrawerLayout.DrawerListener() {
+            @Override
+            public void onDrawerSlide(@NonNull View drawerView, float slideOffset) {
+
+            }
+
+            @Override
+            public void onDrawerOpened(@NonNull View drawerView) {
+                showcase.playDrawerShowcase(drawerLayout);
+            }
+
+            @Override
+            public void onDrawerClosed(@NonNull View drawerView) {
+
+            }
+
+            @Override
+            public void onDrawerStateChanged(int newState) {
+
+            }
         });
 
         zoomOut.setOnClickListener(this);
@@ -477,10 +538,8 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             default:
                 break;
         }
-        if (drawerLayout.isDrawerOpen(GravityCompat.START))
-        {
-            drawerLayout.closeDrawer(GravityCompat.START, false);
-        }
+        util.closeDrawer(drawerLayout, false);
+
         return false;
     }
 
@@ -557,7 +616,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
      * Switch between our front camera and our back camera.
      */
     private void switchCameras() {
-        if(prefs.getBoolean("save_last_camera", true)){
+        if (prefs.getBoolean("save_last_camera", true)) {
             Log.d("DEBUG switchCameras", "Before last camera used update::" + db.selectLastCameraUsed());
             if (mCameraId.equals(CAMERA_BACK)) {
                 db.updateLastCameraUsed(CAMERA_FRONT);
@@ -604,6 +663,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
     @Override
     public void onResume() {
         super.onResume();
+        showcase.presentShowcaseView(drawerLayout);
         startBackgroundThread();
         reopenCamera();
     }
@@ -679,7 +739,7 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             requestPermission(Manifest.permission.CAMERA, REQUEST_CAMERA_PERMISSION);
             return;
         }
-        if(prefs.getBoolean("save_last_camera", true)){
+        if (prefs.getBoolean("save_last_camera", true)) {
             //We get the last camera value stored in our database to keep it stored even if the app is closed.
             String lastCamera = db.selectLastCameraUsed();
             Log.d("DEBUG openCamera", "LastCameraUsed:" + lastCamera);
@@ -1053,5 +1113,80 @@ public class CameraPreviewActivity extends AppCompatActivity implements View.OnC
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
     }
+
+    /*@Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        Toast.makeText(this, "TOCANDO", LENGTH_SHORT).show();
+        //handleFocus(event);
+        //surfaceView.dispatchTouchEvent(event);
+        return super.onTouchEvent(event);
+    }
+
+     */
+
+    public void handleFocus(MotionEvent event) {
+        int pointerId = event.getPointerId(0);
+        int pointerIndex = event.findPointerIndex(pointerId);
+        // Get the pointer's current position
+        float x = event.getX(pointerIndex);
+        float y = event.getY(pointerIndex);
+
+        Rect touchRect = new Rect(
+                (int) (x - 100),
+                (int) (y - 100),
+                (int) (x + 100),
+                (int) (y + 100) );
+
+
+        if (mCameraId == null) return;
+        CameraManager cm = (CameraManager)this.getSystemService(Context.CAMERA_SERVICE);
+        CameraCharacteristics cc = null;
+        try {
+            cc = cm.getCameraCharacteristics(mCameraId);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+
+
+        MeteringRectangle focusArea = new MeteringRectangle(touchRect,MeteringRectangle.METERING_WEIGHT_DONT_CARE);
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+        try {
+            mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
+                    mBackgroundHandler);
+            // After this, the camera will go back to the normal state of preview.
+            //mState = STATE_PREVIEW;
+        } catch (CameraAccessException e){
+            // log
+        }
+
+        /* if (isMeteringAreaAESupported(cc)) {
+         *//*mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS,
+                new MeteringRectangle[]{focusArea});*//*
+    }
+    if (isMeteringAreaAFSupported(cc)) {
+        *//*mPreviewRequestBuilder
+                .set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusArea});
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                CaptureRequest.CONTROL_AF_MODE_AUTO);*//*
+    }*/
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS,
+                new MeteringRectangle[]{focusArea});
+        mPreviewRequestBuilder
+                .set(CaptureRequest.CONTROL_AF_REGIONS, new MeteringRectangle[]{focusArea});
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                CameraMetadata.CONTROL_AF_TRIGGER_START);
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+        try {
+            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mCaptureCallback,
+                    mBackgroundHandler);
+            /* mManualFocusEngaged = true;*/
+        } catch (CameraAccessException e) {
+            // error handling
+        }
+    }
+
 
 }

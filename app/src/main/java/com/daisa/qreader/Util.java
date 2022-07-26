@@ -1,6 +1,14 @@
 package com.daisa.qreader;
 
+import android.content.Context;
+import android.content.res.Resources;
 import android.util.Size;
+import android.view.KeyCharacterMap;
+import android.view.KeyEvent;
+import android.view.ViewConfiguration;
+
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -71,5 +79,36 @@ public class Util {
     public static String getActualDate(){
         SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
         return sdf.format(new Date());
+    }
+
+    public void closeDrawer(DrawerLayout drawerLayout){
+        if(drawerLayout.isDrawerOpen(GravityCompat.START)){
+            drawerLayout.closeDrawer(GravityCompat.START);
+        }
+    }
+
+    public void closeDrawer(DrawerLayout drawerLayout, boolean animate){
+        if(drawerLayout.isDrawerOpen(GravityCompat.START)){
+            drawerLayout.closeDrawer(GravityCompat.START, animate);
+        }
+    }
+
+    public void openDrawer(DrawerLayout drawerLayout){
+        if(!drawerLayout.isDrawerOpen(GravityCompat.START)){
+            drawerLayout.openDrawer(GravityCompat.START);
+        }
+    }
+
+    public boolean hasNavBar(Context context) {
+        // navigation bar was introduced in Android 4.0 (API level 14)
+        Resources resources = context.getResources();
+        int id = resources.getIdentifier("config_showNavigationBar", "bool", "android");
+        if (id > 0) {
+            return resources.getBoolean(id);
+        } else {    // Check for keys
+            boolean hasMenuKey = ViewConfiguration.get(context).hasPermanentMenuKey();
+            boolean hasBackKey = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK);
+            return !hasMenuKey && !hasBackKey;
+        }
     }
 }
